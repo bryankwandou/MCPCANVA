@@ -1,0 +1,337 @@
+{
+ "updated": "2026-10-02",
+ "disclaimer": "Status Free/Pro diambil dari informasi publik per Oktober 2026 dan bisa berbeda per wilayah atau berubah sewaktu-waktu. Cek ulang di aplikasi Canva/CapCut Anda.",
+ "legend": {
+  "tier": {
+   "free": "Gratis",
+   "terbatas": "Gratis terbatas (sebagian isi/kuota butuh Pro)",
+   "pro": "Hanya berbayar (Pro/Teams)"
+  },
+  "studio": {
+   "ada": "Ada di Rakit Studio dan berfungsi",
+   "sebagian": "Ada sebagian",
+   "akun": "Lewat akun Anda sendiri (Canva API / aplikasi CapCut)",
+   "tidak": "Tidak tersedia"
+  }
+ },
+ "sources": [
+  {
+   "title": "Canva AI: Magic Studio guide (2026)",
+   "url": "https://pasqualepillitteri.it/en/news/601/canva-ai-magic-studio-guide"
+  },
+  {
+   "title": "Canva Pro vs Free (2026)",
+   "url": "https://www.stylefactoryproductions.com/blog/canva-pro-vs-free"
+  },
+  {
+   "title": "Canva Help: download file types",
+   "url": "https://www.canva.com/help/article/download-file-types"
+  }
+ ],
+ "features": [
+  {
+   "app": "canva",
+   "cat": "Template",
+   "name": "Template siap pakai",
+   "tier": "terbatas",
+   "studio": "sebagian",
+   "note": "Rakit: template orisinal 8 ukuran × 5 palet. Library template Canva tidak bisa diakses lewat API."
+  },
+  {
+   "app": "canva",
+   "cat": "Template",
+   "name": "Ukuran preset & kustom",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Template",
+   "name": "Magic Design (AI menyusun desain)",
+   "tier": "free",
+   "studio": "sebagian",
+   "note": "Lewat MCP: canva_make_from_template / capcut_make_from_template."
+  },
+  {
+   "app": "canva",
+   "cat": "Elemen",
+   "name": "Bentuk, garis, bingkai, badge",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Elemen",
+   "name": "Grafis, stiker & ilustrasi stok",
+   "tier": "terbatas",
+   "studio": "tidak",
+   "note": "Konten berlisensi Canva. Pakai di Canva dengan akun Anda."
+  },
+  {
+   "app": "canva",
+   "cat": "Elemen",
+   "name": "Foto, video & audio stok",
+   "tier": "terbatas",
+   "studio": "tidak",
+   "note": "Pakai foto/video milik sendiri (Upload atau media di komputer)."
+  },
+  {
+   "app": "canva",
+   "cat": "Teks",
+   "name": "Teks, judul & kombinasi font",
+   "tier": "free",
+   "studio": "ada",
+   "note": "Font dari Google Fonts."
+  },
+  {
+   "app": "canva",
+   "cat": "Teks",
+   "name": "Efek teks (bayangan, outline, hollow, neon, latar)",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Teks",
+   "name": "Upload font sendiri",
+   "tier": "pro",
+   "studio": "ada",
+   "note": "Di Rakit gratis (.ttf/.otf/.woff)."
+  },
+  {
+   "app": "canva",
+   "cat": "Teks",
+   "name": "Magic Write (AI penulis)",
+   "tier": "terbatas",
+   "studio": "tidak",
+   "note": "Free 50 kali total, Pro ±500/bulan."
+  },
+  {
+   "app": "canva",
+   "cat": "Foto",
+   "name": "Upload gambar",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Foto",
+   "name": "Crop, zoom & flip",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Foto",
+   "name": "Adjust (kecerahan, kontras, saturasi, blur) & filter",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Foto",
+   "name": "Background Remover",
+   "tier": "pro",
+   "studio": "tidak",
+   "note": "Fitur AI di server Canva, hanya untuk Pro."
+  },
+  {
+   "app": "canva",
+   "cat": "Foto",
+   "name": "Magic Eraser / Grab / Expand",
+   "tier": "pro",
+   "studio": "tidak",
+   "note": "Fitur AI di server Canva."
+  },
+  {
+   "app": "canva",
+   "cat": "Foto",
+   "name": "Magic Edit",
+   "tier": "free",
+   "studio": "tidak",
+   "note": "Fitur AI di server Canva."
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Group / ungroup",
+   "tier": "free",
+   "studio": "ada",
+   "note": "Ctrl+G / Ctrl+Shift+G"
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Rata & sebar (posisi)",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Kunci elemen",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Layer & urutan",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Garis bantu & snap",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Transparansi",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Gradien",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Bayangan elemen",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Multi-halaman",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Animasi elemen & halaman",
+   "tier": "terbatas",
+   "studio": "tidak",
+   "note": "Belum dibuat."
+  },
+  {
+   "app": "canva",
+   "cat": "Tata letak",
+   "name": "Magic Resize (ubah ukuran desain)",
+   "tier": "pro",
+   "studio": "ada",
+   "note": "Rakit: menu Ubah ukuran (gratis). Versi Canva lewat MCP canva_resize sesuai akun Anda."
+  },
+  {
+   "app": "canva",
+   "cat": "Merek & tim",
+   "name": "Brand Kit",
+   "tier": "terbatas",
+   "studio": "sebagian",
+   "note": "Rakit: palet merek + font. Pro: brand kit lengkap."
+  },
+  {
+   "app": "canva",
+   "cat": "Merek & tim",
+   "name": "Kolaborasi real-time & komentar",
+   "tier": "free",
+   "studio": "tidak",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Merek & tim",
+   "name": "Riwayat versi",
+   "tier": "pro",
+   "studio": "sebagian",
+   "note": "Rakit: undo/redo dalam sesi."
+  },
+  {
+   "app": "canva",
+   "cat": "Merek & tim",
+   "name": "Content Planner (jadwal posting)",
+   "tier": "pro",
+   "studio": "tidak",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Merek & tim",
+   "name": "Brand template + autofill",
+   "tier": "pro",
+   "studio": "akun",
+   "note": "Lewat MCP canva_autofill (Teams/Enterprise)."
+  },
+  {
+   "app": "canva",
+   "cat": "Ekspor",
+   "name": "Download PNG, JPG, PDF",
+   "tier": "free",
+   "studio": "ada",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Ekspor",
+   "name": "PNG latar transparan",
+   "tier": "pro",
+   "studio": "ada",
+   "note": "Di Rakit gratis."
+  },
+  {
+   "app": "canva",
+   "cat": "Ekspor",
+   "name": "Atur skala & kualitas",
+   "tier": "pro",
+   "studio": "ada",
+   "note": "Skala 0.5×–3× dan kualitas JPG."
+  },
+  {
+   "app": "canva",
+   "cat": "Ekspor",
+   "name": "SVG & CMYK",
+   "tier": "pro",
+   "studio": "tidak",
+   "note": ""
+  },
+  {
+   "app": "canva",
+   "cat": "Ekspor",
+   "name": "Kirim ke Canva sebagai desain yang bisa diedit",
+   "tier": "free",
+   "studio": "akun",
+   "note": "Lewat import PPTX resmi (Canva Connect API)."
+  },
+  {
+   "app": "canva",
+   "cat": "Ekspor",
+   "name": "Penyimpanan cloud (Free 5 GB, Pro 1 TB)",
+   "tier": "terbatas",
+   "studio": "sebagian",
+   "note": "Rakit menyimpan di komputer (bridge) atau browser Anda."
+  }
+ ]
+}
