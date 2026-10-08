@@ -200,6 +200,27 @@ async def canva_make_from_template(template: str, title: str, subtitle: str = ""
     return out
 
 
+@mcp.tool()
+async def canva_create_showcase_template(title: str = "Artisan Coffee Masterpiece",
+                                         subtitle: str = "Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut",
+                                         cta: str = "KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG",
+                                         import_to_canva: bool = True) -> dict:
+    """Create the masterpiece Canva showcase template with real photography and 40+ vector/text elements.
+    Generates the editable PPTX and optionally imports it into Canva cloud so it appears in Canva Desktop."""
+    res = templates.build_masterpiece_template(title=title, subtitle=subtitle, cta=cta)
+    if import_to_canva:
+        try:
+            c = canva()
+            res["canva"] = await c.import_file(res["pptx"], title)
+        except Exception as e:
+            res["canva_import_note"] = str(e)
+            res["canva_desktop_guidance"] = (
+                "File PPTX siap diimpor ke Canva Browser atau diseret langsung ke Canva Desktop. "
+                "Setelah disimpan di Canva akun, template langsung tersinkronisasi otomatis di Canva Desktop."
+            )
+    return res
+
+
 # ---------------------------------------------------------------- Canva ----
 @mcp.tool()
 async def canva_whoami() -> dict:

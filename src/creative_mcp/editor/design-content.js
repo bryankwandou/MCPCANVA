@@ -199,6 +199,69 @@ const THEMES = {
 
 // ---------- layouts: (W, H, t) => pages[]  (all adapt to any canvas size) ----------
 const LAYOUTS = {
+  showcase(W, H, t) { // ultra-rich masterpiece showcase with real photo and full element suite
+    const p = t.pal, S = Math.min(W, H), m = S * .065, tw = W - 2 * m;
+    const fs = fitFs(t.title, tw, S * .09, 2, .65);
+    const photoH = H * .32, photoY = H * .185;
+    const cardY = photoY + photoH + S * .04, cardH = S * .13, cardSpacing = S * .015, cardW = (tw - 2 * cardSpacing) / 3;
+    const barY = cardY + cardH + S * .025, locY = barY + S * .055, ctaY = locY + S * .06, ctaH = S * .075;
+    const cardBg = p.soft || '#241C18';
+
+    const els = [
+      Sh('ring', -S * .12, -S * .12, S * .45, S * .45, p.primary, {opacity: .35}),
+      Sh('ring', W - S * .25, H - S * .25, S * .4, S * .4, p.accent, {opacity: .25}),
+      Sh('blob2', W - S * .4, -S * .15, S * .5, S * .5, p.primary, {opacity: .18}),
+      Sh('star4', W - m - S * .08, S * .04, S * .06, S * .06, '#F5B041', {opacity: .9}),
+      Sh('star4', m * .8, photoY + photoH + S * .01, S * .045, S * .045, '#F5B041', {opacity: .8}),
+      Sh('star', W - m * .8, photoY + photoH + S * .02, S * .05, S * .05, p.primary, {opacity: .85}),
+      Sh('star4', W * .48, S * .03, S * .035, S * .035, '#F5B041', {opacity: .7}),
+
+      R(m, S * .04, S * .36, S * .042, p.primary, {radius: 999}),
+      Tx(t.kicker || 'SPECIALTY ROASTERY & CAFE', m, S * .04 + S * .009, S * .36, S * .024, '#120D0A', {bold: true, align: 'center', spacing: 2, font: t.bf}),
+
+      Tx(t.title || 'ARTISAN COFFEE MASTERPIECE', m, S * .095, tw, fs, p.text || '#FFFFFF', {bold: true, font: t.hf, lh: 1.05}),
+      Tx(t.sub || 'Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut', m, S * .095 + tH(t.title, tw, fs, 1.05, .65) + S * .01, tw, S * .032, '#C8BDB0', {font: t.bf}),
+
+      R(m - 4, photoY - 4, tw + 8, photoH + 8, p.primary, {radius: S * .025}),
+      {id: uid(), type: 'image', x: Math.round(m), y: Math.round(photoY), w: Math.round(tw), h: Math.round(photoH),
+       src: 'assets/artisan_coffee.jpg', ar: 4/3, rot: 0, opacity: 1, radius: Math.round(S * .02), crop: {zoom: 1, ox: 0, oy: 0}, name: 'Foto Barista Specialty'},
+
+      St('burst50', W - m - S * .16, photoY - S * .04, S * .18, {rot: -8}),
+
+      R(m + S * .02, photoY + photoH - S * .055, S * .3, S * .04, cardBg, {radius: S * .01}),
+      Tx('Fresh Brewed Everyday', m + S * .02, photoY + photoH - S * .055 + S * .008, S * .3, S * .022, '#F5B041', {bold: true, align: 'center', font: t.bf}),
+
+      ...[
+        {t: '100% Arabica', d: 'Single Origin Aceh & Toraja'},
+        {t: 'Fresh Roasted', d: 'Harian profil rasa optimal'},
+        {t: 'Master Barista', d: 'Seduhan presisi suhu & rasio'}
+      ].flatMap((feat, i) => {
+        const cx = m + i * (cardW + cardSpacing);
+        return [
+          R(cx, cardY, cardW, cardH, cardBg, {radius: S * .02}),
+          Sh('hexagon', cx + S * .015, cardY + S * .015, S * .04, S * .04, p.primary),
+          Tx(String(i + 1), cx + S * .015, cardY + S * .022, S * .04, S * .022, '#120D0A', {bold: true, align: 'center', font: t.hf}),
+          Tx(feat.t, cx + S * .065, cardY + S * .018, cardW - S * .075, S * .028, p.text || '#FFFFFF', {bold: true, font: t.hf}),
+          Tx(feat.d, cx + S * .015, cardY + S * .065, cardW - S * .03, S * .024, '#C8BDB0', {font: t.bf})
+        ];
+      }),
+
+      R(m, barY, tw, S * .046, cardBg, {radius: S * .015}),
+      Sh('star', m + S * .02, barY + S * .01, S * .026, S * .026, '#F5B041'),
+      Tx('Rating 4.9/5.0 dari 2.500+ Ulasan Pelanggan  ·  Pilihan Utama Pecinta Kopi', m + S * .06, barY + S * .01, tw - S * .08, S * .024, p.text || '#FFFFFF', {bold: true, font: t.bf}),
+
+      R(m, locY, tw, S * .05, '#18120F', {radius: S * .015}),
+      Sh('chevron', m + S * .02, locY + S * .013, S * .024, S * .024, p.primary),
+      Tx('Jl. Senopati No. 18, Jakarta Selatan  |  Buka Setiap Hari: 08.00 - 22.00 WIB', m + S * .055, locY + S * .012, tw - S * .07, S * .024, '#C8BDB0', {font: t.bf}),
+
+      R(m, ctaY, tw, ctaH, p.primary, {radius: S * .02}),
+      Tx(t.cta || 'KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG', m, ctaY + ctaH * .28, tw, S * .034, '#120D0A', {bold: true, align: 'center', font: t.bf}),
+
+      Tx('Diseduh dengan cinta dan presisi untuk setiap cangkir berharga  ·  @artisancoffee.id', m, ctaY + ctaH + S * .018, tw, S * .022, '#8D7666', {align: 'center', font: t.bf})
+    ];
+
+    return [{bg: p.bg || '#120D0A', elements: els}];
+  },
   hero(W, H, t) { // photo on top, copy below
     const p = t.pal, S = Math.min(W, H), m = S * .07, wide = W / H > 1.3;
     if (wide) return LAYOUTS.split(W, H, t);
@@ -347,6 +410,7 @@ const LAYOUTS = {
 const tplTheme = (k, extra = {}) => ({...THEMES[k], key: k, ...extra});
 // [theme, size kind, layout, extra]
 const TEMPLATE_DEFS = [
+  ['kopi', 'instagram_post', 'showcase', {title: 'ARTISAN COFFEE MASTERPIECE', kicker: 'SPECIALTY ROASTERY & CAFE', sub: 'Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut', cta: 'PESAN SEKARANG / KUNJUNGI KEDAI'}],
   ['makanan', 'instagram_post', 'hero'], ['makanan', 'story', 'poster'], ['makanan', 'square', 'card'], ['makanan', 'youtube_thumbnail', 'split'], ['makanan', 'banner', 'split'],
   ['kopi', 'instagram_post', 'split'], ['kopi', 'story', 'hero', {mask: 'arch'}], ['kopi', 'square', 'poster'], ['kopi', 'a4', 'menu', {items: THEMES.kopi.items}], ['kopi', 'logo', 'logo', {brand: 'Kedai Kita', tagline: 'KOPI & ROTI', logoShape: 'blob'}],
   ['fashion', 'instagram_post', 'poster'], ['fashion', 'story', 'poster'], ['fashion', 'square', 'split'], ['fashion', 'banner', 'poster'], ['fashion', 'youtube_thumbnail', 'poster'],

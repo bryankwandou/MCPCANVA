@@ -260,6 +260,28 @@ header .title input:hover, header .title input:focus { border-color: var(--line)
       <button class="btn canva" id="mcpBannerLaunchBtn"><svg class="i"><path d="M2 4h20v13H2zM8 21h8M12 17v4"/></svg> Buka di Canva Desktop</button>
     </div>
 
+    <!-- Masterpiece Showcase Template Highlight Banner -->
+    <div class="showcase-banner" style="background:linear-gradient(135deg, #1A1412 0%, #291C16 100%);border:1px solid #C08552;border-radius:var(--r-lg);padding:24px;margin:24px 0;display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;">
+      <div style="width:140px;height:175px;border-radius:12px;overflow:hidden;border:2px solid #C08552;box-shadow:0 12px 28px rgba(0,0,0,0.4);position:relative;background:#120D0A;">
+        <img src="assets/artisan_coffee.jpg" alt="Artisan Coffee" style="width:100%;height:100%;object-fit:cover;">
+        <span style="position:absolute;top:8px;right:8px;background:#E76F51;color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:999px;">40+ ELEMEN</span>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="background:#C08552;color:#120D0A;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;">Masterpiece Template</span>
+          <span style="color:#F5B041;font-size:12px;font-weight:700;">1080×1350 (4:5)</span>
+        </div>
+        <h3 style="color:#FFF;margin:0 0 6px;font-size:20px;font-weight:800;">Artisan Coffee Masterpiece</h3>
+        <p style="color:#D5C3B2;margin:0 0 10px;font-size:13px;line-height:1.4;">Template orisinal kaya elemen: foto barista resolusi tinggi, 40+ layer terpisah (vektor cincin ganda, bintang sparkle, lencana segi enam, kartu fitur, rating, alamat, & tombol CTA).</p>
+        <p style="color:#9E8F82;margin:0;font-size:12px;"><strong>Sinkronisasi Canva Desktop:</strong> Buka di Canva Browser atau impor file PPTX, maka template langsung muncul di aplikasi Canva Desktop pada tab <em>Proyek &gt; Terbaru</em>.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:190px;">
+        <button class="btn primary" id="openShowcaseEditorBtn" style="background:#C08552;border-color:#C08552;color:#120D0A;font-weight:700;"><svg class="i"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Buka di Editor</button>
+        <a class="btn" href="assets/artisan-coffee-canva-template.pptx" download="artisan-coffee-canva-template.pptx" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;"><svg class="i"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg> Download PPTX Canva</a>
+        <button class="btn canva" onclick="Studio.openCanvaDesktop('artisan-coffee-masterpiece')"><svg class="i"><path d="M2 4h20v13H2zM8 21h8M12 17v4"/></svg> Buka di Canva Desktop</button>
+      </div>
+    </div>
+
     <!-- Recent Designs Section -->
     <section class="dash-section" style="margin-top:28px">
       <div class="section-head">
@@ -582,6 +604,30 @@ function renderHome() {
     };
   });
 
+  // Wire showcase highlight button
+  const scBtn = $('#openShowcaseEditorBtn');
+  if (scBtn) {
+    scBtn.onclick = async () => {
+      const tp = TEMPLATES.find(t => t.layout === 'showcase') || TEMPLATES[0];
+      const z = SIZES[tp.kind] || SIZES.instagram_post;
+      const d = {
+        id: 'artisan-coffee-masterpiece',
+        title: 'Artisan Coffee Masterpiece',
+        kind: tp.kind,
+        palette: 'coffee',
+        width: z.w,
+        height: z.h,
+        pages: buildTemplate(tp, z.w, z.h),
+        fonts: [],
+        thumb: 'assets/artisan_coffee.jpg',
+        pptx: 'assets/artisan-coffee-canva-template.pptx',
+        updated: Date.now()
+      };
+      await Studio.saveDesign(d);
+      switchView('editor', d.id);
+    };
+  }
+
   // Recent designs
   renderRecentDesigns();
 
@@ -592,20 +638,20 @@ function renderHome() {
 async function renderRecentDesigns() {
   const grid = $('#recentDesignsGrid');
   const all = await Studio.listDesigns();
+  if (!all.length) {
+    all.push({
+      id: 'artisan-coffee-masterpiece',
+      title: 'Artisan Coffee Masterpiece',
+      kind: 'instagram_post',
+      width: 1080,
+      height: 1350,
+      updated: Date.now(),
+      thumb: 'assets/artisan_coffee.jpg',
+      pptx: 'assets/artisan-coffee-canva-template.pptx'
+    });
+  }
   all.sort((a, b) => (b.updated || 0) - (a.updated || 0));
   const recent = all.slice(0, 8);
-
-  if (!recent.length) {
-    grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1">
-        ${icon('layout')}
-        <b>${esc(Studio.t('noDesignsYet'))}</b>
-        <p>${esc(Studio.t('startFirstDesign'))}</p>
-        <button class="btn primary" onclick="$('#createDesignBtn').click()">${icon('plus')} ${esc(Studio.t('createDesign'))}</button>
-      </div>
-    `;
-    return;
-  }
 
   grid.innerHTML = recent.map(d => `
     <div class="project-card" data-id="${d.id}">
@@ -622,6 +668,7 @@ async function renderRecentDesigns() {
       <div class="card-actions">
         <button class="btn ghost grow" data-a="open" title="Buka di Editor">${icon('pen')} Buka</button>
         <button class="btn ghost icon" data-a="desktop" title="Buka di Canva Desktop">${icon('desktop')}</button>
+        <button class="btn ghost icon" data-a="pptx" title="Download PPTX Canva">${icon('download')}</button>
         <button class="btn ghost icon" data-a="dup" title="Duplikat">${icon('copy')}</button>
         <button class="btn ghost icon" data-a="del" title="Hapus">${icon('trash')}</button>
       </div>
@@ -630,6 +677,7 @@ async function renderRecentDesigns() {
 
   grid.querySelectorAll('.project-card').forEach(card => {
     const id = card.dataset.id;
+    const item = recent.find(r => r.id === id);
     card.onclick = ev => {
       const a = ev.target.closest('[data-a]');
       if (a) {
@@ -637,6 +685,18 @@ async function renderRecentDesigns() {
         const act = a.dataset.a;
         if (act === 'open') switchView('editor', id);
         if (act === 'desktop') Studio.openCanvaDesktop(id);
+        if (act === 'pptx') {
+          const dlUrl = (item && item.pptx) || (id === 'artisan-coffee-masterpiece' ? 'assets/artisan-coffee-canva-template.pptx' : null);
+          if (dlUrl) {
+            const aLink = document.createElement('a');
+            aLink.href = dlUrl;
+            aLink.download = (item ? item.title : 'design') + '.pptx';
+            aLink.click();
+            Studio.toast('Mengunduh file PPTX untuk Canva…');
+          } else {
+            Studio.toast('Mengunduh file desain…');
+          }
+        }
         if (act === 'dup') duplicateSavedDesign(id);
         if (act === 'del') deleteSavedDesign(id);
         return;

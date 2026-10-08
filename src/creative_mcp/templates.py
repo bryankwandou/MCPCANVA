@@ -20,6 +20,7 @@ PALETTES = {
     "elegant": {"bg": "#F6F1EA", "primary": "#8C6A43", "text": "#2B2420", "accent": "#C9A66B"},
     "neon": {"bg": "#0B0B1E", "primary": "#00E5FF", "text": "#FFFFFF", "accent": "#FF2BD6"},
     "pastel": {"bg": "#FFF4F7", "primary": "#F27BA6", "text": "#3A2A33", "accent": "#7CC4F2"},
+    "coffee": {"bg": "#120D0A", "primary": "#D4A373", "text": "#FDFBF7", "accent": "#E76F51", "soft": "#241C18"},
 }
 
 CAPCUT_TEMPLATES = {
@@ -29,6 +30,7 @@ CAPCUT_TEMPLATES = {
     "youtube_intro": "Intro YouTube 16:9: judul besar + subjudul di atas klip.",
 }
 CANVA_TEMPLATES = {
+    "showcase": (1080, 1350, "Masterpiece Showcase dengan Foto Realistis & Koleksi Elemen Lengkap 4:5"),
     "instagram_post": (1080, 1350, "Poster feed Instagram 4:5"),
     "story": (1080, 1920, "Story/Reels cover 9:16"),
     "youtube_thumbnail": (1280, 720, "Thumbnail YouTube 16:9"),
@@ -249,6 +251,117 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
             text(s, cta, m, H - m - H * 0.065, W * 0.5, H * 0.065, W * 0.035, pal["bg"], bold=True,
                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
             _ = b
+    elif template == "showcase":
+        s = slide()
+        bg_col = pal.get("bg", "#120D0A")
+        primary_col = pal.get("primary", "#D4A373")
+        accent_col = pal.get("accent", "#E76F51")
+        text_col = pal.get("text", "#FDFBF7")
+        muted_col = "#C8BDB0"
+        card_bg = pal.get("soft", "#241C18")
+
+        # 1. Background vector accents from library
+        ring1 = s.shapes.add_shape(MSO_SHAPE.DONUT, px(-70), px(-70), px(280), px(280))
+        ring1.fill.solid()
+        ring1.fill.fore_color.rgb = _rgb(primary_col)
+        ring1.line.fill.background()
+        ring1.adjustments[0] = 0.12
+
+        ring2 = s.shapes.add_shape(MSO_SHAPE.DONUT, px(W - 140), px(H - 180), px(260), px(260))
+        ring2.fill.solid()
+        ring2.fill.fore_color.rgb = _rgb(accent_col)
+        ring2.line.fill.background()
+        ring2.adjustments[0] = 0.1
+
+        for sx, sy, ssize, scol in [(W - 110, 45, 40, "#F5B041"), (45, 680, 32, "#F5B041"),
+                                    (W - 85, 715, 34, primary_col), (int(W * 0.46), 40, 24, "#F5B041")]:
+            st = s.shapes.add_shape(MSO_SHAPE.STAR_4_POINT, px(sx), px(sy), px(ssize), px(ssize))
+            st.fill.solid()
+            st.fill.fore_color.rgb = _rgb(scol)
+            st.line.fill.background()
+
+        # 2. Header Category Badge / Pill
+        pill_w, pill_h = 330, 42
+        rect(s, m, 50, pill_w, pill_h, primary_col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        text(s, "SPECIALTY ROASTERY & CAFE", m, 50, pill_w, pill_h, 13, "#120D0A",
+             bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+
+        # 3. Main Headline & Subheadline
+        text(s, title or "ARTISAN COFFEE MASTERPIECE", m, 105, W - 2 * m, 85, 40, text_col, bold=True)
+        text(s, subtitle or "Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut",
+             m, 195, W - 2 * m, 45, 17, muted_col)
+
+        # 4. Featured Photo with Container Border
+        photo_y, photo_h, photo_w = 250, 430, W - 2 * m
+        rect(s, m - 6, photo_y - 6, photo_w + 12, photo_h + 12, primary_col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        if images:
+            photo(s, images[0], m, photo_y, photo_w, photo_h)
+        else:
+            rect(s, m, photo_y, photo_w, photo_h, primary_col)
+
+        # 5. Promo Burst Sticker / Discount Badge
+        burst_size, burst_x, burst_y = 140, W - m - 120, photo_y - 25
+        burst = s.shapes.add_shape(MSO_SHAPE.STAR_5_POINT, px(burst_x), px(burst_y), px(burst_size), px(burst_size))
+        burst.fill.solid()
+        burst.fill.fore_color.rgb = _rgb(accent_col)
+        burst.line.fill.background()
+        text(s, "DISKON\n25%", burst_x, burst_y + 35, burst_size, 60, 18, "#FFFFFF",
+             bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+
+        # 6. Ribbon / Mini Badge on Photo
+        rect(s, m + 16, photo_y + photo_h - 48, 250, 36, card_bg, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        text(s, "Fresh Brewed Everyday", m + 16, photo_y + photo_h - 48, 250, 36, 13, "#F5B041",
+             bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+
+        # 7. Three Feature Highlight Cards (Grid Layout)
+        card_y, card_h, card_spacing = 705, 135, 16
+        card_w = (W - 2 * m - 2 * card_spacing) / 3
+        features = [
+            ("100% Arabica", "Single Origin Aceh Gayo & Toraja"),
+            ("Fresh Roasted", "Disangrai harian profil rasa optimal"),
+            ("Master Barista", "Seduhan presisi suhu & rasio ideal"),
+        ]
+        for i, (f_title, f_desc) in enumerate(features):
+            cx = m + i * (card_w + card_spacing)
+            rect(s, cx, card_y, card_w, card_h, card_bg, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+            hex_icon = s.shapes.add_shape(MSO_SHAPE.HEXAGON, px(cx + 14), px(card_y + 14), px(28), px(28))
+            hex_icon.fill.solid()
+            hex_icon.fill.fore_color.rgb = _rgb(primary_col)
+            hex_icon.line.fill.background()
+            text(s, str(i + 1), cx + 14, card_y + 14, 28, 28, 12, "#120D0A",
+                 bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+            text(s, f_title, cx + 50, card_y + 15, card_w - 56, 26, 15, text_col, bold=True)
+            text(s, f_desc, cx + 14, card_y + 48, card_w - 28, 75, 13, muted_col)
+
+        # 8. Rating & Guarantee Bar
+        bar_y = 860
+        rect(s, m, bar_y, W - 2 * m, 48, card_bg, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        r_star = s.shapes.add_shape(MSO_SHAPE.STAR_5_POINT, px(m + 16), px(bar_y + 12), px(24), px(24))
+        r_star.fill.solid()
+        r_star.fill.fore_color.rgb = _rgb("#F5B041")
+        r_star.line.fill.background()
+        text(s, "Rating 4.9/5.0 dari 2.500+ Ulasan Pelanggan  ·  Pilihan Utama Pecinta Kopi",
+             m + 50, bar_y, W - 2 * m - 60, 48, 14, text_col, bold=True, anchor=MSO_ANCHOR.MIDDLE)
+
+        # 9. Location & Operational Hours Pill
+        loc_y = 925
+        rect(s, m, loc_y, W - 2 * m, 52, "#18120F", shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        chv = s.shapes.add_shape(MSO_SHAPE.CHEVRON, px(m + 18), px(loc_y + 17), px(18), px(18))
+        chv.fill.solid()
+        chv.fill.fore_color.rgb = _rgb(primary_col)
+        chv.line.fill.background()
+        text(s, "Jl. Senopati No. 18, Kebayoran Baru, Jakarta Selatan  |  Buka Setiap Hari: 08.00 - 22.00 WIB",
+             m + 46, loc_y, W - 2 * m - 56, 52, 14, muted_col, anchor=MSO_ANCHOR.MIDDLE)
+
+        # 10. Call To Action (CTA) Button
+        cta_y, cta_h = 998, 70
+        rect(s, m, cta_y, W - 2 * m, cta_h, primary_col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        text(s, cta or "KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG", m, cta_y, W - 2 * m, cta_h, 19,
+             "#120D0A", bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+
+        # 11. Footer Note
+        text(s, "Diseduh dengan cinta dan presisi untuk setiap cangkir berharga  ·  @artisancoffee.id",
+             m, 1085, W - 2 * m, 30, 13, "#8D7666", align=PP_ALIGN.CENTER)
     elif template == "youtube_thumbnail":
         s = slide()
         if images:
@@ -384,6 +497,10 @@ def design_to_pptx(design: dict, out_dir: str | Path) -> str:
                     stream = io.BytesIO(base64.b64decode(src.split(",", 1)[1]))
                 elif src.startswith("path:"):
                     stream = io.BytesIO(Path(src[5:]).read_bytes())
+                elif Path(src).is_file():
+                    stream = io.BytesIO(Path(src).read_bytes())
+                elif (Path(__file__).parent / "editor" / src.lstrip("/")).is_file():
+                    stream = io.BytesIO((Path(__file__).parent / "editor" / src.lstrip("/")).read_bytes())
                 else:
                     continue
                 iw, ih = PILImage.open(stream).size
@@ -411,3 +528,33 @@ def design_to_pptx(design: dict, out_dir: str | Path) -> str:
     f = out / f"{safe or 'design'}-{int(time.time())}.pptx"
     prs.save(f)
     return str(f)
+
+
+def build_masterpiece_template(out_path: str = "~/creative-mcp-designs/artisan-coffee-canva-template.pptx",
+                               title: str = "Artisan Coffee Masterpiece",
+                               subtitle: str = "Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut",
+                               cta: str = "KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG") -> dict:
+    """Build a full, production-ready showcase Canva template with real photo, 40+ vector/text elements,
+    and save it as an editable PPTX ready to be imported into Canva."""
+    asset_img = Path(__file__).parent / "editor" / "assets" / "artisan_coffee.jpg"
+    img_str = str(asset_img.resolve()) if asset_img.exists() else None
+    images = [img_str] if img_str else None
+
+    pptx_path = build_pptx(
+        template="showcase",
+        out_path=out_path,
+        title=title,
+        subtitle=subtitle,
+        images=images,
+        cta=cta,
+        palette="coffee",
+        font="Montserrat",
+    )
+    return {
+        "template": "showcase",
+        "title": title,
+        "format": "1080x1350 (4:5)",
+        "elements_count": 40,
+        "image": img_str,
+        "pptx": pptx_path,
+    }

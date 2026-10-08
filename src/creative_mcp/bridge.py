@@ -134,13 +134,43 @@ def _design_file(design_id: str) -> Path:
 
 
 def list_designs() -> list[dict]:
+    DESIGNS.mkdir(parents=True, exist_ok=True)
+    f_seed = _design_file("artisan-coffee-masterpiece")
+    if not f_seed.exists():
+        seed_data = {
+            "id": "artisan-coffee-masterpiece",
+            "title": "Artisan Coffee Masterpiece",
+            "width": 1080,
+            "height": 1350,
+            "updated": int(time.time() * 1000),
+            "thumb": "assets/artisan_coffee.jpg",
+            "pptx": "assets/artisan-coffee-canva-template.pptx",
+            "pages": [{
+                "id": "page-1",
+                "bg": "#120D0A",
+                "title": "Masterpiece Showcase",
+                "elements": [
+                    {"id": "el-1", "type": "rect", "x": 70, "y": 50, "w": 330, "h": 42, "fill": "#D4A373", "radius": 999},
+                    {"id": "el-2", "type": "text", "x": 70, "y": 58, "w": 330, "h": 26, "text": "SPECIALTY ROASTERY & CAFE", "fontSize": 13, "color": "#120D0A", "bold": True, "align": "center"},
+                    {"id": "el-3", "type": "text", "x": 70, "y": 105, "w": 940, "h": 85, "text": "ARTISAN COFFEE MASTERPIECE", "fontSize": 40, "color": "#FDFBF7", "bold": True},
+                    {"id": "el-4", "type": "text", "x": 70, "y": 195, "w": 940, "h": 45, "text": "Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut", "fontSize": 17, "color": "#C8BDB0"},
+                    {"id": "el-5", "type": "rect", "x": 64, "y": 244, "w": 952, "h": 442, "fill": "#D4A373", "radius": 24},
+                    {"id": "el-6", "type": "image", "x": 70, "y": 250, "w": 940, "h": 430, "src": "assets/artisan_coffee.jpg", "radius": 20},
+                    {"id": "el-7", "type": "star", "x": 860, "y": 225, "w": 140, "h": 140, "fill": "#E76F51"},
+                    {"id": "el-8", "type": "text", "x": 860, "y": 260, "w": 140, "h": 60, "text": "DISKON\n25%", "fontSize": 18, "color": "#FFFFFF", "bold": True, "align": "center"},
+                    {"id": "el-9", "type": "rect", "x": 70, "y": 998, "w": 940, "h": 70, "fill": "#D4A373", "radius": 20},
+                    {"id": "el-10", "type": "text", "x": 70, "y": 1020, "w": 940, "h": 36, "text": "KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG", "fontSize": 19, "color": "#120D0A", "bold": True, "align": "center"}
+                ]
+            }]
+        }
+        f_seed.write_text(json.dumps(seed_data, indent=2), encoding="utf-8")
     out = []
     for f in DESIGNS.glob("*.json"):
         try:
             d = json.loads(f.read_text(encoding="utf-8"))
         except ValueError:
             continue
-        out.append({k: d.get(k) for k in ("id", "title", "width", "height", "updated", "thumb")})
+        out.append({k: d.get(k) for k in ("id", "title", "width", "height", "updated", "thumb", "pptx")})
     return out
 
 
@@ -225,6 +255,7 @@ def mcp_status() -> dict:
             "canva_import_url",
             "canva_open_editor",
             "canva_open_desktop",
+            "canva_create_showcase_template",
             "canva_autofill",
             "canva_resize",
             "catalog",
