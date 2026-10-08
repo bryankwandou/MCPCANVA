@@ -223,6 +223,10 @@ header .title input:hover, header .title input:focus { border-color: var(--line)
       <span class="dot"></span>
       <span id="mcpNavStatusText">MCP Server</span>
     </button>
+    <div class="user-pill" id="canvaUserPill" title="Akun Canva Terhubung: Nayrbryan Fans 0 (nayrbryan.fans.0@gmail.com)" style="display:flex;align-items:center;gap:8px;padding:3px 10px 3px 5px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:12px;font-weight:700;cursor:pointer;" onclick="switchView('mcp')">
+      <span style="width:26px;height:26px;border-radius:50%;background:#0E7A0D;color:#FFF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">NF</span>
+      <span class="hide-sm" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Nayrbryan Fans 0</span>
+    </div>
     <button class="btn canva hide-sm" id="launchCanvaDesktopBtn" title="Buka Aplikasi Desktop Canva (canva://)">
       <svg class="i"><path d="M2 4h20v13H2zM8 21h8M12 17v4"/></svg>
       <span>Canva Desktop</span>
@@ -390,6 +394,25 @@ header .title input:hover, header .title input:focus { border-color: var(--line)
           <button class="btn" id="mcpClearConnBtn">Reset</button>
         </div>
         <div id="mcpConnResult" style="font-size:12.5px;color:var(--muted);margin-top:4px"></div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;display:grid;gap:14px">
+        <h3>Akun Canva Terhubung (Browser &amp; Desktop)</h3>
+        <div style="display:flex;align-items:center;gap:14px;background:var(--surface-sunken);padding:14px;border-radius:var(--r-md);border:1px solid var(--line);">
+          <div style="width:46px;height:46px;border-radius:50%;background:#0E7A0D;color:#FFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;">NF</div>
+          <div style="flex:1;">
+            <b style="font-size:15px;display:block;color:var(--text)">Nayrbryan Fans 0</b>
+            <span style="font-size:12.5px;color:var(--muted)">nayrbryan.fans.0@gmail.com</span>
+          </div>
+          <span style="background:rgba(30,158,110,0.15);color:#0E9F6E;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;">Tersambung</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">
+          <div><strong>Desain Terbaru di Akun:</strong> Document - UKM Esport (A4), Document - UKM Esport (Copy)</div>
+          <div><strong>Sinkronisasi Cloud:</strong> Aktif real-time antara Canva Browser dan Canva Desktop.</div>
+        </div>
+        <div class="row">
+          <a class="btn" href="https://www.canva.com/folder/all-designs" target="_blank" rel="noopener noreferrer" style="text-decoration:none;"><svg class="i"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg> Buka Proyek di Canva Web</a>
+        </div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;display:grid;gap:14px">

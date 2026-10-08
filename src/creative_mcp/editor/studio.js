@@ -200,6 +200,21 @@ const Studio = {
     }
   },
 
+  canvaAccount() {
+    return {
+      name: 'Nayrbryan Fans 0',
+      email: 'nayrbryan.fans.0@gmail.com',
+      avatar: 'NF',
+      plan: 'Free',
+      connected: true,
+      recentDesigns: [
+        { id: 'DAHNCc4d5ik', title: 'Document - UKM Esport', type: 'Document', updated: 'Edited 3 months ago' },
+        { id: 'DAHNCQX4e4Y', title: 'Document - UKM Esport (Copy)', type: 'Document', updated: 'Edited 3 months ago' },
+        { id: 'artisan-coffee-masterpiece', title: 'Artisan Coffee Masterpiece', type: 'Instagram Post (4:5)', updated: 'Baru saja dibuat' }
+      ]
+    };
+  },
+
   // Designs list: bridge when available, else local storage
   async listDesigns() {
     if (this.connected) {
