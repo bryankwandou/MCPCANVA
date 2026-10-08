@@ -176,6 +176,67 @@ def design_to_canva(design: dict) -> dict:
     return {"pptx": path, "canva": res}
 
 
+def canva_desktop_path() -> Path | None:
+    candidates = [
+        Path.home() / "AppData/Local/Programs/Canva/Canva.exe",
+        Path("C:/Program Files/Canva/Canva.exe"),
+        Path("C:/Program Files (x86)/Canva/Canva.exe"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+def launch_canva(data: dict | None = None) -> dict:
+    import subprocess
+    import sys
+
+    data = data or {}
+    url = data.get("url") or "canva://"
+    try:
+        if sys.platform == "win32":
+            p = canva_desktop_path()
+            if p and not data.get("url"):
+                subprocess.Popen([str(p)])
+                return {"ok": True, "message": "Canva Desktop dibuka melalui Canva.exe", "path": str(p)}
+            os.startfile(url)
+            return {"ok": True, "message": "Canva Desktop dibuka melalui protokol", "target": url}
+        return {"error": "Hanya didukung di Windows"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def mcp_status() -> dict:
+    c_path = canva_desktop_path()
+    cat = catalog()
+    return {
+        "status": "connected",
+        "canva_desktop_installed": c_path is not None,
+        "canva_desktop_path": str(c_path) if c_path else None,
+        "tools": [
+            "canva_list_designs",
+            "canva_create_design",
+            "canva_get_design",
+            "canva_get_pages",
+            "canva_upload_asset",
+            "canva_export",
+            "canva_import_file",
+            "canva_import_url",
+            "canva_open_editor",
+            "canva_open_desktop",
+            "canva_autofill",
+            "canva_resize",
+            "catalog",
+            "desktop_screenshot",
+            "desktop_click",
+            "desktop_type",
+        ],
+        "canva_account": cat.get("canva", {}),
+    }
+
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -237,6 +298,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(capcut_library.list_items())
             if path == "/api/catalog":
                 return self._json(catalog())
+            if path == "/api/mcp/status":
+                return self._json(mcp_status())
             if path == "/media":
                 if not _allowed_media(q.get("path", "")):
                     return self._json({"error": "not allowed"}, 403)
@@ -291,6 +354,8 @@ class Handler(BaseHTTPRequestHandler):
                     b.get("cta", ""), b.get("music"), b.get("palette", "bold")))
             if path == "/api/design/canva":
                 return self._json(design_to_canva(self._body()))
+            if path == "/api/canva/launch":
+                return self._json(launch_canva(self._body()))
             self._json({"error": "not found"}, 404)
         except Exception as e:
             self._json({"error": str(e)}, 500)

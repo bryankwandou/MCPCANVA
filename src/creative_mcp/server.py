@@ -372,6 +372,14 @@ async def canva_open_editor(design_id: str) -> dict:
 
 
 @mcp.tool()
+def canva_open_desktop(design_id: str | None = None) -> dict:
+    """Launch or focus the Canva Desktop application installed on this PC.
+    If design_id is supplied, it targets that design."""
+    return bridge.launch_canva({"url": f"canva://design/{design_id}" if design_id else "canva://"})
+
+
+
+@mcp.tool()
 def desktop_open_url(url: str) -> str:
     """Open a URL in the default browser on this computer (e.g. a Canva or CapCut web editor)."""
     import webbrowser
