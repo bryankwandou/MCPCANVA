@@ -239,7 +239,7 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
     if template not in CANVA_TEMPLATES:
         raise ValueError(f"Template tidak dikenal. Pilihan: {list(CANVA_TEMPLATES)}")
     W, H, _ = CANVA_TEMPLATES[template]
-    pal = PALETTES.get(palette, PALETTES["bold"])
+    pal = palette if isinstance(palette, dict) else PALETTES.get(palette, PALETTES["bold"])
     px = lambda v: Emu(int(v * 9525))  # noqa: E731  (1px at 96dpi)
     prs = Presentation()
     prs.slide_width, prs.slide_height = px(W), px(H)
@@ -418,17 +418,55 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
         primary_col = pal.get("primary", "#38BDF8")
         accent_col = pal.get("accent", "#818CF8")
 
-        # Slide 1: Editorial Cover
+        # Slide 1: High-End Asymmetric Editorial Split with Photo
         s1 = slide()
         line1 = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(2))
         line1.fill.solid()
         line1.fill.fore_color.rgb = _rgb(border_col)
         line1.line.fill.background()
 
-        text(s1, "VENTURE PITCH DECK // 2026", m, m * 0.7 + 16, (W - 2 * m) * 0.5, 30, 15, primary_col, bold=True)
+        text(s1, "VENTURE PITCH DECK // 2026", m, m * 0.7 + 16, 400, 30, 15, primary_col, bold=True)
         text(s1, "CONFIDENTIAL & PROPRIETARY", W - m - 350, m * 0.7 + 16, 350, 30, 14, sub_ink, align=PP_ALIGN.RIGHT)
 
-        text(s1, title or "EKOSISTEM DIGITAL NUSANTARA 2026", m, H * 0.28, W * 0.65, 180, 52, ink, bold=True)
+        split_w = (W - 2 * m) * 0.52
+        photo_x = m + split_w + 30
+        photo_w = W - photo_x - m
+        photo_y = H * 0.22
+        photo_h = H * 0.66
+
+        # Place the executive hero photo on the right half
+        hero_img = None
+        if images and len(images) > 0 and Path(images[0]).exists():
+            hero_img = str(images[0])
+        else:
+            cand_list = [
+                Path(__file__).parent / "editor" / "assets" / "executive_hero.jpg",
+                Path(__file__).parent / "editor" / "assets" / "fintech_hero.jpg",
+                Path(__file__).parent / "editor" / "assets" / "tech_hero.jpg",
+                Path(__file__).parent / "editor" / "assets" / "skyscraper_hero.jpg",
+                Path(__file__).parent / "editor" / "assets" / "artisan_coffee.jpg",
+            ]
+            for img_cand in cand_list:
+                if img_cand.exists():
+                    hero_img = str(img_cand)
+                    break
+        if hero_img:
+            photo(s1, hero_img, photo_x, photo_y, photo_w, photo_h)
+            p_frame = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(photo_x), px(photo_y), px(photo_w), px(photo_h))
+            p_frame.fill.background()
+            p_frame.line.color.rgb = _rgb(border_col)
+            p_frame.line.width = px(1)
+
+            badge_h = 44
+            badge_box = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(photo_x + 20), px(photo_y + photo_h - badge_h - 20), px(260), px(badge_h))
+            badge_box.fill.solid()
+            badge_box.fill.fore_color.rgb = _rgb("#0A0E17")
+            badge_box.line.color.rgb = _rgb(primary_col)
+            badge_box.line.width = px(1)
+            text(s1, "SERI A // Rp 50 MILIAR", photo_x + 20, photo_y + photo_h - badge_h - 12, 260, 30, 13, primary_col, bold=True, align=PP_ALIGN.CENTER)
+
+        # Left Column Copy
+        text(s1, title or "EKOSISTEM DIGITAL NUSANTARA 2026", m, H * 0.25, split_w - 20, 200, 48, ink, bold=True)
 
         vline = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.55), px(4), px(110))
         vline.fill.solid()
@@ -436,19 +474,19 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
         vline.line.fill.background()
 
         text(s1, subtitle or "Arsitektur Platform Skalabel dengan Keamanan Mutakhir dan Efisiensi Operasional Teruji",
-             m + 24, H * 0.55, W * 0.58, 110, 20, sub_ink)
+             m + 24, H * 0.55, split_w - 44, 110, 20, sub_ink)
 
-        line1_b = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H - m - 60), px(W - 2 * m), px(1))
+        line1_b = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H - m - 60), px(split_w), px(1))
         line1_b.fill.solid()
         line1_b.fill.fore_color.rgb = _rgb(border_col)
         line1_b.line.fill.background()
 
-        text(s1, "Direktorat Strategi & Kemitraan Korporat · 2026", m, H - m - 40, W * 0.5, 30, 15, sub_ink)
-        rect(s1, W - m - 240, H - m - 50, 240, 44, primary_col)
-        text(s1, "PITCH PROPOSAL", W - m - 240, H - m - 42, 240, 30, 13, "#FFFFFF",
+        text(s1, "Direktorat Strategi & Kemitraan Korporat · 2026", m, H - m - 40, split_w - 220, 30, 15, sub_ink)
+        rect(s1, m + split_w - 200, H - m - 50, 200, 44, primary_col)
+        text(s1, "PITCH PROPOSAL", m + split_w - 200, H - m - 42, 200, 30, 13, "#000000" if not dark else "#FFFFFF",
              bold=True, align=PP_ALIGN.CENTER)
 
-        # Slide 2: Market Problem (2x2 Hairline Grid)
+        # Slide 2: Market Problem (2x2 Grid with high-contrast tinted card backgrounds)
         s2 = slide()
         line2 = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(1))
         line2.fill.solid()
@@ -460,6 +498,7 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
         text(s2, "Kesenjangan tajam antara tuntutan kecepatan pasar dan infrastruktur warisan yang berjalan saat ini.",
              m, H * 0.24, W * 0.7, 45, 17, sub_ink)
 
+        card_bg = "#162032" if dark else "#F1F5F9"
         problems = [
             ("01", "Fragmentasi Sistem Warisan", "Integrasi lintas kanal terhambat arsitektur silo yang lambat dan rentan inkonsistensi data."),
             ("02", "Beban Operasional Tinggi", "Proses manual berulang meningkatkan biaya tenaga kerja serta resiko kesalahan manusia."),
@@ -473,17 +512,28 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
             gx = m + col * (grid_w + 30)
             gy = H * 0.35 + row * (grid_h + 24)
             card = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx), px(gy), px(grid_w), px(grid_h))
-            card.fill.background()
+            card.fill.solid()
+            card.fill.fore_color.rgb = _rgb(card_bg)
             card.line.color.rgb = _rgb(border_col)
             card.line.width = px(1)
 
-            text(s2, p_num, gx + 24, gy + 20, 50, 35, 22, primary_col, bold=True)
-            text(s2, p_title, gx + 80, gy + 20, grid_w - 100, 35, 20, ink, bold=True)
-            d_line = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx + 24), px(gy + 62), px(grid_w - 48), px(1))
+            c_top = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx), px(gy), px(grid_w), px(3))
+            c_top.fill.solid()
+            c_top.fill.fore_color.rgb = _rgb(primary_col if idx % 2 == 0 else accent_col)
+            c_top.line.fill.background()
+
+            n_badge = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx + 24), px(gy + 20), px(44), px(32))
+            n_badge.fill.solid()
+            n_badge.fill.fore_color.rgb = _rgb(primary_col if idx % 2 == 0 else accent_col)
+            n_badge.line.fill.background()
+            text(s2, p_num, gx + 24, gy + 24, 44, 28, 14, "#000000" if not dark else "#FFFFFF", bold=True, align=PP_ALIGN.CENTER)
+
+            text(s2, p_title, gx + 80, gy + 22, grid_w - 100, 35, 20, ink, bold=True)
+            d_line = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx + 24), gy + 66, px(grid_w - 48), px(1))
             d_line.fill.solid()
             d_line.fill.fore_color.rgb = _rgb(border_col)
             d_line.line.fill.background()
-            text(s2, p_desc, gx + 24, gy + 74, grid_w - 48, 80, 15, sub_ink)
+            text(s2, p_desc, gx + 24, gy + 78, grid_w - 48, 80, 15, sub_ink)
 
         # Slide 3: Solution Architecture
         s3 = slide()
@@ -499,7 +549,8 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
              m, H * 0.44, split_x - m - 40, 90, 17, sub_ink)
 
         s_box = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.65), px(split_x - m - 40), px(54))
-        s_box.fill.background()
+        s_box.fill.solid()
+        s_box.fill.fore_color.rgb = _rgb(card_bg)
         s_box.line.color.rgb = _rgb(primary_col)
         s_box.line.width = px(2)
         text(s3, "REDUKSI BIAYA INFRASTRUKTUR HINGGA 42%", m, H * 0.65 + 16, split_x - m - 40, 30, 14, primary_col,
@@ -519,15 +570,18 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
             py = H * 0.22 + idx * (H * 0.22)
             rx = split_x + 40
             rw = W - rx - m
-            text(s3, p_num, rx, py, 45, 30, 22, accent_col, bold=True)
-            text(s3, p_title, rx + 55, py, rw - 55, 30, 21, ink, bold=True)
-            text(s3, p_desc, rx + 55, py + 38, rw - 55, 60, 15, sub_ink)
-            p_line = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(rx), px(py + 105), px(rw), px(1))
-            p_line.fill.solid()
-            p_line.fill.fore_color.rgb = _rgb(border_col)
-            p_line.line.fill.background()
 
-        # Slide 4: Key Traction Metrics (Giant Display Numbers)
+            p_box = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(rx), px(py), px(rw), px(H * 0.18))
+            p_box.fill.solid()
+            p_box.fill.fore_color.rgb = _rgb(card_bg)
+            p_box.line.color.rgb = _rgb(border_col)
+            p_box.line.width = px(1)
+
+            text(s3, p_num, rx + 20, py + 16, 45, 30, 22, accent_col, bold=True)
+            text(s3, p_title, rx + 75, py + 16, rw - 95, 30, 21, ink, bold=True)
+            text(s3, p_desc, rx + 75, py + 52, rw - 95, 60, 15, sub_ink)
+
+        # Slide 4: Key Traction Metrics (Giant Display Numbers & High-Contrast Tinted Cards)
         s4 = slide()
         line4 = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(1))
         line4.fill.solid()
@@ -538,24 +592,25 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
         text(s4, "Pertumbuhan Eksponensial & Metrik Kinerja Teruji", m, H * 0.16, W * 0.75, 70, 38, ink, bold=True)
 
         kpis = [
-            ("+240%", "PERTUMBUHAN TAHUNAN (YoY)", "Pertumbuhan pendapatan berulang murni tanpa pembengkakan biaya akuisisi pengguna."),
-            ("89.4%", "RETENSI PENGGUNA 12 BULAN", "Retensi tingkat tinggi berkat ketergantungan workflow harian yang efisien."),
-            ("Rp 65 M", "TOTAL VOLUME TRANSAKSI", "Volume transaksi bruto yang telah diproses secara aman dalam periode pelaporan.")
+            ("+240%", "PERTUMBUHAN TAHUNAN (YoY)", "Pertumbuhan pendapatan berulang murni tanpa pembengkakan biaya akuisisi pengguna.", primary_col),
+            ("89.4%", "RETENSI PENGGUNA 12 BULAN", "Retensi tingkat tinggi berkat ketergantungan workflow harian yang efisien.", accent_col),
+            ("Rp 65 M", "TOTAL VOLUME TRANSAKSI", "Volume transaksi bruto yang telah diproses secara aman dalam periode pelaporan.", primary_col)
         ]
         kpi_w = (W - 2 * m - 40) / 3
-        for idx, (k_num, k_lbl, k_desc) in enumerate(kpis):
+        for idx, (k_num, k_lbl, k_desc, k_col) in enumerate(kpis):
             kx = m + idx * (kpi_w + 20)
             k_box = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(kx), px(H * 0.32), px(kpi_w), px(H * 0.52))
-            k_box.fill.background()
+            k_box.fill.solid()
+            k_box.fill.fore_color.rgb = _rgb(card_bg)
             k_box.line.color.rgb = _rgb(border_col)
             k_box.line.width = px(1)
 
-            top_bar = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(kx), px(H * 0.32), px(kpi_w), px(4))
+            top_bar = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(kx), px(H * 0.32), px(kpi_w), px(5))
             top_bar.fill.solid()
-            top_bar.fill.fore_color.rgb = _rgb(primary_col)
+            top_bar.fill.fore_color.rgb = _rgb(k_col)
             top_bar.line.fill.background()
 
-            text(s4, k_num, kx + 24, H * 0.38, kpi_w - 48, 80, 52, primary_col, bold=True)
+            text(s4, k_num, kx + 24, H * 0.38, kpi_w - 48, 80, 54, k_col, bold=True)
             text(s4, k_lbl, kx + 24, H * 0.53, kpi_w - 48, 30, 14, ink, bold=True)
             text(s4, k_desc, kx + 24, H * 0.62, kpi_w - 48, 90, 15, sub_ink)
 
@@ -571,20 +626,22 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
         text(s5, "Alokasi Rencana Pendanaan: 45% Riset & Rekayasa Produk · 35% Ekspansi Penetrasi Pasar · 20% Cadangan Operasional.",
              m, H * 0.36, W * 0.72, 60, 18, sub_ink)
 
-        mid_div = s5.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.52), px(W - 2 * m), px(1))
-        mid_div.fill.solid()
-        mid_div.fill.fore_color.rgb = _rgb(border_col)
-        mid_div.line.fill.background()
+        # Contact card
+        c_card = s5.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.54), px(W - 2 * m), px(H * 0.32))
+        c_card.fill.solid()
+        c_card.fill.fore_color.rgb = _rgb(card_bg)
+        c_card.line.color.rgb = _rgb(border_col)
+        c_card.line.width = px(1)
 
-        text(s5, "KANTOR PUSAT & JALUR KEMITRAAN RESMI", m, H * 0.58, 400, 26, 14, primary_col, bold=True)
+        text(s5, "KANTOR PUSAT & JALUR KEMITRAAN RESMI", m + 32, H * 0.58, 400, 26, 14, primary_col, bold=True)
         text(s5, "Konsorsium Ekosistem Cipta Digital Nusantara\nSurat Elektronik: kemitraan@digitalnusantara.id",
-             m, H * 0.64, W * 0.45, 60, 18, ink, bold=True)
+             m + 32, H * 0.64, W * 0.45, 60, 18, ink, bold=True)
         text(s5, "Dokumen ini disiapkan khusus untuk mitra strategis dan dilindungi kerahasiaan korporasi.",
-             m, H * 0.75, W * 0.45, 30, 13, sub_ink)
+             m + 32, H * 0.76, W * 0.45, 30, 13, sub_ink)
 
-        btn = rect(s5, W - m - 320, H * 0.63, 320, 56, primary_col)
-        text(s5, "JADWALKAN DISKUSI STRATEGIS", W - m - 320, H * 0.63 + 16, 320, 30, 13,
-             "#FFFFFF", bold=True, align=PP_ALIGN.CENTER)
+        btn = rect(s5, W - m - 340, H * 0.64, 300, 56, primary_col)
+        text(s5, "JADWALKAN DISKUSI STRATEGIS", W - m - 340, H * 0.64 + 16, 300, 30, 13,
+             "#000000" if not dark else "#FFFFFF", bold=True, align=PP_ALIGN.CENTER)
 
     out = Path(out_path).expanduser()
     if out.is_dir() or not out.suffix:
