@@ -45,7 +45,7 @@ PRESENTATION_THEMES = [
     ("agritech_smartfarm", "Pertanian & AgriTech", "Modernisasi Rantai Pasok Pangan Nasional"),
     ("logistics_fleet", "Logistik & Rantai Pasok", "Optimasi Logistik Rantai Dingin & Kargo"),
     ("clean_energy_solar", "Energi & Lingkungan", "Transisi Energi Bersih Industri 2026"),
-    ("corporate_audit", "Hukum & Tata Kelola", "Kerangka Kepatuhan & Manajemen Risiko"),
+    ("corporate_audit", "Tata Kelola & Kepatuhan Korporat", "Kerangka Kepatuhan & Manajemen Risiko"),
     ("esg_sustainability", "Keberlanjutan & ESG", "Laporan Keberlanjutan & Dampak Sosial"),
     ("cybersecurity_soc", "Keamanan Siber & IT", "Pertahanan Siber Aktif & Keamanan Cloud"),
     ("proptech_marketplace", "Properti & Real Estate", "Platform Investasi Properti Digital"),
@@ -56,7 +56,7 @@ PRESENTATION_THEMES = [
     ("growth_marketing", "Pemasaran & Pertumbuhan", "Strategi Akuisisi & Retensi Pengguna Skala Besar"),
     ("brand_identity", "Identitas Visual & Merek", "Panduan Merek & Desain Terpadu 2026"),
     ("hr_talent", "SDM & Budaya Kerja", "Pengembangan Talenta & Tempat Kerja Idaman"),
-    ("legal_tech", "Layanan Hukum & Regulasi", "Manajemen Kontrak Cerdas & Kepatuhan Bisnis"),
+    ("legal_tech", "Administrasi Kontrak & Kepatuhan Bisnis", "Manajemen Kontrak Cerdas & Efisiensi Operasional"),
     ("luxury_hospitality", "Pariwisata & Perhotelan", "Pengalaman Menginap Berkelas Dunia"),
     ("fnb_franchise_expansion", "Kuliner & Waralaba", "Peluang Kemitraan Waralaba Kuliner 2026"),
     ("gaming_interactive", "Game & Hiburan Digital", "Ekspansi IP Game Mobile Berstandar Global"),
@@ -316,110 +316,87 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
         accent_col = pal.get("accent", "#E76F51")
         text_col = pal.get("text", "#FDFBF7")
         muted_col = "#C8BDB0"
-        card_bg = pal.get("soft", "#241C18")
+        card_bg = pal.get("soft", "#1E1814")
+        border_col = "#3A2E26"
 
-        # 1. Background vector accents from library
-        ring1 = s.shapes.add_shape(MSO_SHAPE.DONUT, px(-70), px(-70), px(280), px(280))
-        ring1.fill.solid()
-        ring1.fill.fore_color.rgb = _rgb(primary_col)
-        ring1.line.fill.background()
-        ring1.adjustments[0] = 0.12
+        # 1. Hairline header divider and architectural kicker
+        line_top = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(45), px(W - 2 * m), px(1))
+        line_top.fill.solid()
+        line_top.fill.fore_color.rgb = _rgb(border_col)
+        line_top.line.fill.background()
 
-        ring2 = s.shapes.add_shape(MSO_SHAPE.DONUT, px(W - 140), px(H - 180), px(260), px(260))
-        ring2.fill.solid()
-        ring2.fill.fore_color.rgb = _rgb(accent_col)
-        ring2.line.fill.background()
-        ring2.adjustments[0] = 0.1
+        text(s, "SPECIALTY ROASTERY & ESPRESSO BAR", m, 55, (W - 2 * m) * 0.6, 28, 12, primary_col, bold=True)
+        text(s, "EST. 2026 // EDITION 01", W - m - 200, 55, 200, 28, 11, "#9E8E80", align=PP_ALIGN.RIGHT)
 
-        for sx, sy, ssize, scol in [(W - 110, 45, 40, "#F5B041"), (45, 680, 32, "#F5B041"),
-                                    (W - 85, 715, 34, primary_col), (int(W * 0.46), 40, 24, "#F5B041")]:
-            st = s.shapes.add_shape(MSO_SHAPE.STAR_4_POINT, px(sx), px(sy), px(ssize), px(ssize))
-            st.fill.solid()
-            st.fill.fore_color.rgb = _rgb(scol)
-            st.line.fill.background()
-
-        # 2. Header Category Badge / Pill
-        pill_w, pill_h = 330, 42
-        rect(s, m, 50, pill_w, pill_h, primary_col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        text(s, "SPECIALTY ROASTERY & CAFE", m, 50, pill_w, pill_h, 13, "#120D0A",
-             bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-
-        # 3. Main Headline & Subheadline
-        text(s, title or "ARTISAN COFFEE MASTERPIECE", m, 105, W - 2 * m, 85, 40, text_col, bold=True)
+        # 2. Main Headline & Subheadline
+        text(s, title or "ARTISAN COFFEE MASTERPIECE", m, 98, W - 2 * m, 95, 42, text_col, bold=True)
         text(s, subtitle or "Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut",
-             m, 195, W - 2 * m, 45, 17, muted_col)
+             m, 198, W - 2 * m, 45, 16, muted_col)
 
-        # 4. Featured Photo with Container Border
-        photo_y, photo_h, photo_w = 250, 430, W - 2 * m
-        rect(s, m - 6, photo_y - 6, photo_w + 12, photo_h + 12, primary_col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        # 3. Featured Photo with Clean Hairline Border
+        photo_y, photo_h, photo_w = 250, 440, W - 2 * m
         if images:
             photo(s, images[0], m, photo_y, photo_w, photo_h)
         else:
             rect(s, m, photo_y, photo_w, photo_h, primary_col)
+        photo_frame = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(photo_y), px(photo_w), px(photo_h))
+        photo_frame.fill.background()
+        photo_frame.line.color.rgb = _rgb(border_col)
+        photo_frame.line.width = px(1)
 
-        # 5. Promo Burst Sticker / Discount Badge
-        burst_size, burst_x, burst_y = 140, W - m - 120, photo_y - 25
-        burst = s.shapes.add_shape(MSO_SHAPE.STAR_5_POINT, px(burst_x), px(burst_y), px(burst_size), px(burst_size))
-        burst.fill.solid()
-        burst.fill.fore_color.rgb = _rgb(accent_col)
-        burst.line.fill.background()
-        text(s, "DISKON\n25%", burst_x, burst_y + 35, burst_size, 60, 18, "#FFFFFF",
-             bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-
-        # 6. Ribbon / Mini Badge on Photo
-        rect(s, m + 16, photo_y + photo_h - 48, 250, 36, card_bg, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        text(s, "Fresh Brewed Everyday", m + 16, photo_y + photo_h - 48, 250, 36, 13, "#F5B041",
-             bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-
-        # 7. Three Feature Highlight Cards (Grid Layout)
-        card_y, card_h, card_spacing = 705, 135, 16
+        # 4. Three Feature Highlight Cards (Grid Layout with Hairline Rules)
+        card_y, card_h, card_spacing = 715, 130, 16
         card_w = (W - 2 * m - 2 * card_spacing) / 3
         features = [
-            ("100% Arabica", "Single Origin Aceh Gayo & Toraja"),
-            ("Fresh Roasted", "Disangrai harian profil rasa optimal"),
-            ("Master Barista", "Seduhan presisi suhu & rasio ideal"),
+            ("01", "100% Arabica", "Single Origin Aceh Gayo & Toraja Kalosi terkurasi."),
+            ("02", "Fresh Roasted", "Disangrai harian berkalibrasi kurva suhu presisi."),
+            ("03", "Master Barista", "Ekstraksi rasio ideal 1:2 bertekanan stabil 9 bar."),
         ]
-        for i, (f_title, f_desc) in enumerate(features):
+        for i, (num, f_title, f_desc) in enumerate(features):
             cx = m + i * (card_w + card_spacing)
-            rect(s, cx, card_y, card_w, card_h, card_bg, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-            hex_icon = s.shapes.add_shape(MSO_SHAPE.HEXAGON, px(cx + 14), px(card_y + 14), px(28), px(28))
-            hex_icon.fill.solid()
-            hex_icon.fill.fore_color.rgb = _rgb(primary_col)
-            hex_icon.line.fill.background()
-            text(s, str(i + 1), cx + 14, card_y + 14, 28, 28, 12, "#120D0A",
-                 bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-            text(s, f_title, cx + 50, card_y + 15, card_w - 56, 26, 15, text_col, bold=True)
-            text(s, f_desc, cx + 14, card_y + 48, card_w - 28, 75, 13, muted_col)
+            card_box = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(cx), px(card_y), px(card_w), px(card_h))
+            card_box.fill.solid()
+            card_box.fill.fore_color.rgb = _rgb(card_bg)
+            card_box.line.color.rgb = _rgb(border_col)
+            card_box.line.width = px(1)
 
-        # 8. Rating & Guarantee Bar
-        bar_y = 860
-        rect(s, m, bar_y, W - 2 * m, 48, card_bg, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        r_star = s.shapes.add_shape(MSO_SHAPE.STAR_5_POINT, px(m + 16), px(bar_y + 12), px(24), px(24))
-        r_star.fill.solid()
-        r_star.fill.fore_color.rgb = _rgb("#F5B041")
-        r_star.line.fill.background()
-        text(s, "Rating 4.9/5.0 dari 2.500+ Ulasan Pelanggan  ·  Pilihan Utama Pecinta Kopi",
-             m + 50, bar_y, W - 2 * m - 60, 48, 14, text_col, bold=True, anchor=MSO_ANCHOR.MIDDLE)
+            text(s, num, cx + 16, card_y + 14, 32, 28, 14, primary_col, bold=True)
+            text(s, f_title, cx + 52, card_y + 14, card_w - 68, 28, 15, text_col, bold=True)
+            div = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(cx + 16), px(card_y + 46), px(card_w - 32), px(1))
+            div.fill.solid()
+            div.fill.fore_color.rgb = _rgb(border_col)
+            div.line.fill.background()
+            text(s, f_desc, cx + 16, card_y + 54, card_w - 32, 65, 12, muted_col)
 
-        # 9. Location & Operational Hours Pill
+        # 5. Quality Benchmark Bar
+        bar_y = 865
+        bar_box = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(bar_y), px(W - 2 * m), px(44))
+        bar_box.fill.solid()
+        bar_box.fill.fore_color.rgb = _rgb(card_bg)
+        bar_box.line.color.rgb = _rgb(border_col)
+        bar_box.line.width = px(1)
+        text(s, "SKOR MUTU 94.6 SCA  ·  2.500+ ULASAN KEPUASAN PELANGGAN  ·  SERAHAN TANGAN TERTINGGI",
+             m, bar_y + 12, W - 2 * m, 24, 12, primary_col, bold=True, align=PP_ALIGN.CENTER)
+
+        # 6. Location & Operational Hours
         loc_y = 925
-        rect(s, m, loc_y, W - 2 * m, 52, "#18120F", shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        chv = s.shapes.add_shape(MSO_SHAPE.CHEVRON, px(m + 18), px(loc_y + 17), px(18), px(18))
-        chv.fill.solid()
-        chv.fill.fore_color.rgb = _rgb(primary_col)
-        chv.line.fill.background()
-        text(s, "Jl. Senopati No. 18, Kebayoran Baru, Jakarta Selatan  |  Buka Setiap Hari: 08.00 - 22.00 WIB",
-             m + 46, loc_y, W - 2 * m - 56, 52, 14, muted_col, anchor=MSO_ANCHOR.MIDDLE)
+        loc_box = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(loc_y), px(W - 2 * m), px(48))
+        loc_box.fill.solid()
+        loc_box.fill.fore_color.rgb = _rgb("#16110D")
+        loc_box.line.color.rgb = _rgb(border_col)
+        loc_box.line.width = px(1)
+        text(s, "JL. SENOPATI NO. 18, JAKARTA SELATAN  |  BUKA SETIAP HARI: 08.00 - 22.00 WIB",
+             m, loc_y + 14, W - 2 * m, 24, 12, muted_col, align=PP_ALIGN.CENTER)
 
-        # 10. Call To Action (CTA) Button
-        cta_y, cta_h = 998, 70
-        rect(s, m, cta_y, W - 2 * m, cta_h, primary_col, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        text(s, cta or "KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG", m, cta_y, W - 2 * m, cta_h, 19,
+        # 7. Call To Action (CTA) Button
+        cta_y, cta_h = 992, 68
+        rect(s, m, cta_y, W - 2 * m, cta_h, primary_col)
+        text(s, cta or "KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG", m, cta_y, W - 2 * m, cta_h, 17,
              "#120D0A", bold=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
 
-        # 11. Footer Note
-        text(s, "Diseduh dengan cinta dan presisi untuk setiap cangkir berharga  ·  @artisancoffee.id",
-             m, 1085, W - 2 * m, 30, 13, "#8D7666", align=PP_ALIGN.CENTER)
+        # 8. Footer Note
+        text(s, "Diseduh dengan dedikasi dan presisi untuk setiap cangkir bernilai  ·  @artisancoffee.id",
+             m, 1075, W - 2 * m, 28, 12, "#8D7666", align=PP_ALIGN.CENTER)
     elif template == "youtube_thumbnail":
         s = slide()
         if images:
@@ -433,30 +410,181 @@ def build_pptx(template: str, out_path: str, title: str, subtitle: str = "",
             text(s, subtitle, m, H - m - 80, W * 0.32, 80, 40, "#FFFFFF", bold=True,
                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
             _ = tag
-    else:  # presentation
-        s = slide()
-        if images:
-            photo(s, images[0], W * 0.5, 0, W * 0.5, H)
-        rect(s, m, H * 0.3, 14, H * 0.4, pal["primary"])
-        text(s, title, m + 50, H * 0.28, W * 0.42, H * 0.3, 88, pal["text"], bold=True, anchor=MSO_ANCHOR.BOTTOM)
-        if subtitle:
-            text(s, subtitle, m + 50, H * 0.6, W * 0.42, H * 0.15, 36, pal["text"])
-        for i, point in enumerate(body):
-            s = slide()
-            rect(s, 0, 0, W, 16, pal["primary"])
-            heading, _, detail = point.partition(":")
-            text(s, f"{i + 1:02d}", m, m * 1.5, 200, 120, 72, pal["accent"], bold=True)
-            text(s, heading.strip(), m, m * 1.5 + 130, W * 0.5 - m, 200, 64, pal["text"], bold=True)
-            if detail:
-                text(s, detail.strip(), m, m * 1.5 + 340, W * 0.5 - m, H * 0.4, 34, pal["text"])
-            img = images[(i + 1) % len(images)] if len(images) > 1 else None
-            if img:
-                photo(s, img, W * 0.55, m * 1.5, W * 0.45 - m, H - 3 * m)
-            else:
-                rect(s, W * 0.55, m * 1.5, W * 0.45 - m, H - 3 * m, pal["primary"], MSO_SHAPE.ROUNDED_RECTANGLE)
-        s = slide()
-        text(s, cta or "Terima kasih!", m, 0, W - 2 * m, H, 96, pal["primary"], bold=True,
-             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+    else:  # presentation (1920x1080 16:9, 5-Slide Swiss Editorial Executive Deck)
+        dark = str(pal.get("bg", "#0F172A")).startswith("#0") or str(pal.get("bg", "#0F172A")).startswith("#1")
+        ink = "#F8FAFC" if dark else "#0F172A"
+        sub_ink = "#94A3B8" if dark else "#475569"
+        border_col = "#334155" if dark else "#CBD5E1"
+        primary_col = pal.get("primary", "#38BDF8")
+        accent_col = pal.get("accent", "#818CF8")
+
+        # Slide 1: Editorial Cover
+        s1 = slide()
+        line1 = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(2))
+        line1.fill.solid()
+        line1.fill.fore_color.rgb = _rgb(border_col)
+        line1.line.fill.background()
+
+        text(s1, "VENTURE PITCH DECK // 2026", m, m * 0.7 + 16, (W - 2 * m) * 0.5, 30, 15, primary_col, bold=True)
+        text(s1, "CONFIDENTIAL & PROPRIETARY", W - m - 350, m * 0.7 + 16, 350, 30, 14, sub_ink, align=PP_ALIGN.RIGHT)
+
+        text(s1, title or "EKOSISTEM DIGITAL NUSANTARA 2026", m, H * 0.28, W * 0.65, 180, 52, ink, bold=True)
+
+        vline = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.55), px(4), px(110))
+        vline.fill.solid()
+        vline.fill.fore_color.rgb = _rgb(primary_col)
+        vline.line.fill.background()
+
+        text(s1, subtitle or "Arsitektur Platform Skalabel dengan Keamanan Mutakhir dan Efisiensi Operasional Teruji",
+             m + 24, H * 0.55, W * 0.58, 110, 20, sub_ink)
+
+        line1_b = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H - m - 60), px(W - 2 * m), px(1))
+        line1_b.fill.solid()
+        line1_b.fill.fore_color.rgb = _rgb(border_col)
+        line1_b.line.fill.background()
+
+        text(s1, "Direktorat Strategi & Kemitraan Korporat · 2026", m, H - m - 40, W * 0.5, 30, 15, sub_ink)
+        rect(s1, W - m - 240, H - m - 50, 240, 44, primary_col)
+        text(s1, "PITCH PROPOSAL", W - m - 240, H - m - 42, 240, 30, 13, "#FFFFFF",
+             bold=True, align=PP_ALIGN.CENTER)
+
+        # Slide 2: Market Problem (2x2 Hairline Grid)
+        s2 = slide()
+        line2 = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(1))
+        line2.fill.solid()
+        line2.fill.fore_color.rgb = _rgb(border_col)
+        line2.line.fill.background()
+
+        text(s2, "01 / MARKET PAIN POINTS", m, m * 0.7 + 16, 400, 30, 14, accent_col, bold=True)
+        text(s2, "Inefisiensi Struktural yang Dihadapi Industri", m, H * 0.16, W * 0.75, 70, 38, ink, bold=True)
+        text(s2, "Kesenjangan tajam antara tuntutan kecepatan pasar dan infrastruktur warisan yang berjalan saat ini.",
+             m, H * 0.24, W * 0.7, 45, 17, sub_ink)
+
+        problems = [
+            ("01", "Fragmentasi Sistem Warisan", "Integrasi lintas kanal terhambat arsitektur silo yang lambat dan rentan inkonsistensi data."),
+            ("02", "Beban Operasional Tinggi", "Proses manual berulang meningkatkan biaya tenaga kerja serta resiko kesalahan manusia."),
+            ("03", "Keterlambatan Siklus Rilis", "Waktu peluncuran fitur baru membutuhkan hitungan minggu tanpa otomasi validasi data."),
+            ("04", "Keterbatasan Visibilitas Real-Time", "Pimpinan kekurangan akses dasbor analitik terpadu untuk keputusan strategis cepat.")
+        ]
+        grid_w = (W - 2 * m - 30) / 2
+        grid_h = H * 0.26
+        for idx, (p_num, p_title, p_desc) in enumerate(problems):
+            row, col = idx // 2, idx % 2
+            gx = m + col * (grid_w + 30)
+            gy = H * 0.35 + row * (grid_h + 24)
+            card = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx), px(gy), px(grid_w), px(grid_h))
+            card.fill.background()
+            card.line.color.rgb = _rgb(border_col)
+            card.line.width = px(1)
+
+            text(s2, p_num, gx + 24, gy + 20, 50, 35, 22, primary_col, bold=True)
+            text(s2, p_title, gx + 80, gy + 20, grid_w - 100, 35, 20, ink, bold=True)
+            d_line = s2.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(gx + 24), px(gy + 62), px(grid_w - 48), px(1))
+            d_line.fill.solid()
+            d_line.fill.fore_color.rgb = _rgb(border_col)
+            d_line.line.fill.background()
+            text(s2, p_desc, gx + 24, gy + 74, grid_w - 48, 80, 15, sub_ink)
+
+        # Slide 3: Solution Architecture
+        s3 = slide()
+        line3 = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(1))
+        line3.fill.solid()
+        line3.fill.fore_color.rgb = _rgb(border_col)
+        line3.line.fill.background()
+
+        text(s3, "02 / VALUE PROPOSITION", m, m * 0.7 + 16, 400, 30, 14, primary_col, bold=True)
+        split_x = W * 0.46
+        text(s3, "Solusi Terintegrasi Berbasis Arsitektur Cerdas", m, H * 0.22, split_x - m - 40, 110, 36, ink, bold=True)
+        text(s3, "Menggabungkan pemrosesan throughput tinggi, keandalan 99.95% uptime, dan orkestrasi otomatis.",
+             m, H * 0.44, split_x - m - 40, 90, 17, sub_ink)
+
+        s_box = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.65), px(split_x - m - 40), px(54))
+        s_box.fill.background()
+        s_box.line.color.rgb = _rgb(primary_col)
+        s_box.line.width = px(2)
+        text(s3, "REDUKSI BIAYA INFRASTRUKTUR HINGGA 42%", m, H * 0.65 + 16, split_x - m - 40, 30, 14, primary_col,
+             bold=True, align=PP_ALIGN.CENTER)
+
+        v_div = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(split_x), px(H * 0.2), px(1), px(H * 0.65))
+        v_div.fill.solid()
+        v_div.fill.fore_color.rgb = _rgb(border_col)
+        v_div.line.fill.background()
+
+        pillars = [
+            ("01", "Skalabilitas Awan Elastis", "Infrastruktur kontainer terdistribusi yang menyesuaikan kapasitas lalu lintas dinamis secara mulus."),
+            ("02", "Enkripsi & Tata Kelola Standar Global", "Protokol perlindungan data berstandar enterprise dengan jejak audit komprehensif."),
+            ("03", "Konektor API Instan", "Integrasi modular yang mudah disematkan pada sistem yang sedang beroperasi tanpa penghentian layanan.")
+        ]
+        for idx, (p_num, p_title, p_desc) in enumerate(pillars):
+            py = H * 0.22 + idx * (H * 0.22)
+            rx = split_x + 40
+            rw = W - rx - m
+            text(s3, p_num, rx, py, 45, 30, 22, accent_col, bold=True)
+            text(s3, p_title, rx + 55, py, rw - 55, 30, 21, ink, bold=True)
+            text(s3, p_desc, rx + 55, py + 38, rw - 55, 60, 15, sub_ink)
+            p_line = s3.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(rx), px(py + 105), px(rw), px(1))
+            p_line.fill.solid()
+            p_line.fill.fore_color.rgb = _rgb(border_col)
+            p_line.line.fill.background()
+
+        # Slide 4: Key Traction Metrics (Giant Display Numbers)
+        s4 = slide()
+        line4 = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(1))
+        line4.fill.solid()
+        line4.fill.fore_color.rgb = _rgb(border_col)
+        line4.line.fill.background()
+
+        text(s4, "03 / TRACTION & FINANCIAL EFFICIENCY", m, m * 0.7 + 16, 450, 30, 14, primary_col, bold=True)
+        text(s4, "Pertumbuhan Eksponensial & Metrik Kinerja Teruji", m, H * 0.16, W * 0.75, 70, 38, ink, bold=True)
+
+        kpis = [
+            ("+240%", "PERTUMBUHAN TAHUNAN (YoY)", "Pertumbuhan pendapatan berulang murni tanpa pembengkakan biaya akuisisi pengguna."),
+            ("89.4%", "RETENSI PENGGUNA 12 BULAN", "Retensi tingkat tinggi berkat ketergantungan workflow harian yang efisien."),
+            ("Rp 65 M", "TOTAL VOLUME TRANSAKSI", "Volume transaksi bruto yang telah diproses secara aman dalam periode pelaporan.")
+        ]
+        kpi_w = (W - 2 * m - 40) / 3
+        for idx, (k_num, k_lbl, k_desc) in enumerate(kpis):
+            kx = m + idx * (kpi_w + 20)
+            k_box = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(kx), px(H * 0.32), px(kpi_w), px(H * 0.52))
+            k_box.fill.background()
+            k_box.line.color.rgb = _rgb(border_col)
+            k_box.line.width = px(1)
+
+            top_bar = s4.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(kx), px(H * 0.32), px(kpi_w), px(4))
+            top_bar.fill.solid()
+            top_bar.fill.fore_color.rgb = _rgb(primary_col)
+            top_bar.line.fill.background()
+
+            text(s4, k_num, kx + 24, H * 0.38, kpi_w - 48, 80, 52, primary_col, bold=True)
+            text(s4, k_lbl, kx + 24, H * 0.53, kpi_w - 48, 30, 14, ink, bold=True)
+            text(s4, k_desc, kx + 24, H * 0.62, kpi_w - 48, 90, 15, sub_ink)
+
+        # Slide 5: The Ask & Closing
+        s5 = slide()
+        line5 = s5.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(m * 0.7), px(W - 2 * m), px(1))
+        line5.fill.solid()
+        line5.fill.fore_color.rgb = _rgb(border_col)
+        line5.line.fill.background()
+
+        text(s5, "04 / STRATEGIC INVESTMENT & PARTNERSHIP", m, m * 0.7 + 16, 450, 30, 14, accent_col, bold=True)
+        text(s5, "Membangun Ekosistem Bersama", m, H * 0.22, W * 0.65, 80, 48, ink, bold=True)
+        text(s5, "Alokasi Rencana Pendanaan: 45% Riset & Rekayasa Produk · 35% Ekspansi Penetrasi Pasar · 20% Cadangan Operasional.",
+             m, H * 0.36, W * 0.72, 60, 18, sub_ink)
+
+        mid_div = s5.shapes.add_shape(MSO_SHAPE.RECTANGLE, px(m), px(H * 0.52), px(W - 2 * m), px(1))
+        mid_div.fill.solid()
+        mid_div.fill.fore_color.rgb = _rgb(border_col)
+        mid_div.line.fill.background()
+
+        text(s5, "KANTOR PUSAT & JALUR KEMITRAAN RESMI", m, H * 0.58, 400, 26, 14, primary_col, bold=True)
+        text(s5, "Konsorsium Ekosistem Cipta Digital Nusantara\nSurat Elektronik: kemitraan@digitalnusantara.id",
+             m, H * 0.64, W * 0.45, 60, 18, ink, bold=True)
+        text(s5, "Dokumen ini disiapkan khusus untuk mitra strategis dan dilindungi kerahasiaan korporasi.",
+             m, H * 0.75, W * 0.45, 30, 13, sub_ink)
+
+        btn = rect(s5, W - m - 320, H * 0.63, 320, 56, primary_col)
+        text(s5, "JADWALKAN DISKUSI STRATEGIS", W - m - 320, H * 0.63 + 16, 320, 30, 13,
+             "#FFFFFF", bold=True, align=PP_ALIGN.CENTER)
 
     out = Path(out_path).expanduser()
     if out.is_dir() or not out.suffix:

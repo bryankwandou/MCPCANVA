@@ -199,65 +199,59 @@ const THEMES = {
 
 // ---------- layouts: (W, H, t) => pages[]  (all adapt to any canvas size) ----------
 const LAYOUTS = {
-  showcase(W, H, t) { // ultra-rich masterpiece showcase with real photo and full element suite
-    const p = t.pal, S = Math.min(W, H), m = S * .065, tw = W - 2 * m;
+  showcase(W, H, t) { // high-end luxury editorial showcase with real photo and architectural grid
+    const p = t.pal, S = Math.min(W, H), m = S * .075, tw = W - 2 * m;
     const fs = fitFs(t.title, tw, S * .09, 2, .65);
-    const photoH = H * .32, photoY = H * .185;
-    const cardY = photoY + photoH + S * .04, cardH = S * .13, cardSpacing = S * .015, cardW = (tw - 2 * cardSpacing) / 3;
-    const barY = cardY + cardH + S * .025, locY = barY + S * .055, ctaY = locY + S * .06, ctaH = S * .075;
-    const cardBg = p.soft || '#241C18';
+    const photoH = H * .34, photoY = H * .19;
+    const cardY = photoY + photoH + S * .04, cardH = S * .12, cardSpacing = S * .02, cardW = (tw - 2 * cardSpacing) / 3;
+    const barY = cardY + cardH + S * .03, locY = barY + S * .055, ctaY = locY + S * .065, ctaH = S * .072;
+    const cardBg = p.soft || '#1E1814';
+    const borderCol = '#3A2E26';
 
     const els = [
-      Sh('ring', -S * .12, -S * .12, S * .45, S * .45, p.primary, {opacity: .35}),
-      Sh('ring', W - S * .25, H - S * .25, S * .4, S * .4, p.accent, {opacity: .25}),
-      Sh('blob2', W - S * .4, -S * .15, S * .5, S * .5, p.primary, {opacity: .18}),
-      Sh('star4', W - m - S * .08, S * .04, S * .06, S * .06, '#F5B041', {opacity: .9}),
-      Sh('star4', m * .8, photoY + photoH + S * .01, S * .045, S * .045, '#F5B041', {opacity: .8}),
-      Sh('star', W - m * .8, photoY + photoH + S * .02, S * .05, S * .05, p.primary, {opacity: .85}),
-      Sh('star4', W * .48, S * .03, S * .035, S * .035, '#F5B041', {opacity: .7}),
+      // Clean hairline top rule & subtle architectural framing
+      Sh('line', m, m * .7, tw, 2, borderCol, {opacity: .5}),
+      Tx((t.kicker || 'SPECIALTY ROASTERY & ESPRESSO BAR').toUpperCase(), m, m * .7 + S * .015, tw * .6, S * .024, p.primary, {bold: true, spacing: 4, font: t.bf}),
+      Tx('EST. 2026 // EDITION 01', W - m - S * .35, m * .7 + S * .015, S * .35, S * .02, '#9E8E80', {align: 'right', spacing: 2, font: t.bf}),
 
-      R(m, S * .04, S * .36, S * .042, p.primary, {radius: 999}),
-      Tx(t.kicker || 'SPECIALTY ROASTERY & CAFE', m, S * .04 + S * .009, S * .36, S * .024, '#120D0A', {bold: true, align: 'center', spacing: 2, font: t.bf}),
-
+      // Headline and subheadline
       Tx(t.title || 'ARTISAN COFFEE MASTERPIECE', m, S * .095, tw, fs, p.text || '#FFFFFF', {bold: true, font: t.hf, lh: 1.05}),
-      Tx(t.sub || 'Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut', m, S * .095 + tH(t.title, tw, fs, 1.05, .65) + S * .01, tw, S * .032, '#C8BDB0', {font: t.bf}),
+      Tx(t.sub || 'Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut', m, S * .095 + tH(t.title, tw, fs, 1.05, .65) + S * .012, tw, S * .03, '#C8BDB0', {font: t.bf, lh: 1.4}),
 
-      R(m - 4, photoY - 4, tw + 8, photoH + 8, p.primary, {radius: S * .025}),
+      // Clean photo frame with refined hairline border
+      R(m, photoY, tw, photoH, null, {stroke: borderCol, strokeW: 1, radius: 4}),
       {id: uid(), type: 'image', x: Math.round(m), y: Math.round(photoY), w: Math.round(tw), h: Math.round(photoH),
-       src: 'assets/artisan_coffee.jpg', ar: 4/3, rot: 0, opacity: 1, radius: Math.round(S * .02), crop: {zoom: 1, ox: 0, oy: 0}, name: 'Foto Barista Specialty'},
+       src: 'assets/artisan_coffee.jpg', ar: 4/3, rot: 0, opacity: 1, radius: 4, crop: {zoom: 1, ox: 0, oy: 0}, name: 'Foto Barista Specialty'},
 
-      St('burst50', W - m - S * .16, photoY - S * .04, S * .18, {rot: -8}),
-
-      R(m + S * .02, photoY + photoH - S * .055, S * .3, S * .04, cardBg, {radius: S * .01}),
-      Tx('Fresh Brewed Everyday', m + S * .02, photoY + photoH - S * .055 + S * .008, S * .3, S * .022, '#F5B041', {bold: true, align: 'center', font: t.bf}),
-
+      // 3 Refined Feature Columns with Hairline Borders
       ...[
-        {t: '100% Arabica', d: 'Single Origin Aceh & Toraja'},
-        {t: 'Fresh Roasted', d: 'Harian profil rasa optimal'},
-        {t: 'Master Barista', d: 'Seduhan presisi suhu & rasio'}
+        {num: '01', t: '100% Arabica', d: 'Single Origin Aceh Gayo & Toraja Kalosi terkurasi.'},
+        {num: '02', t: 'Fresh Roasted', d: 'Sangrai harian berkalibrasi kurva suhu presisi.'},
+        {num: '03', t: 'Master Barista', d: 'Ekstraksi rasio ideal 1:2 bertekanan stabil 9 bar.'}
       ].flatMap((feat, i) => {
         const cx = m + i * (cardW + cardSpacing);
         return [
-          R(cx, cardY, cardW, cardH, cardBg, {radius: S * .02}),
-          Sh('hexagon', cx + S * .015, cardY + S * .015, S * .04, S * .04, p.primary),
-          Tx(String(i + 1), cx + S * .015, cardY + S * .022, S * .04, S * .022, '#120D0A', {bold: true, align: 'center', font: t.hf}),
-          Tx(feat.t, cx + S * .065, cardY + S * .018, cardW - S * .075, S * .028, p.text || '#FFFFFF', {bold: true, font: t.hf}),
-          Tx(feat.d, cx + S * .015, cardY + S * .065, cardW - S * .03, S * .024, '#C8BDB0', {font: t.bf})
+          R(cx, cardY, cardW, cardH, cardBg, {radius: 4, stroke: borderCol, strokeW: 1}),
+          Tx(feat.num, cx + S * .02, cardY + S * .018, S * .05, S * .028, p.primary, {bold: true, font: t.hf}),
+          Tx(feat.t, cx + S * .075, cardY + S * .018, cardW - S * .09, S * .028, p.text || '#FFFFFF', {bold: true, font: t.hf}),
+          Sh('line', cx + S * .02, cardY + S * .052, cardW - S * .04, 1, borderCol, {opacity: .4}),
+          Tx(feat.d, cx + S * .02, cardY + S * .062, cardW - S * .04, S * .024, '#B0A396', {font: t.bf, lh: 1.35})
         ];
       }),
 
-      R(m, barY, tw, S * .046, cardBg, {radius: S * .015}),
-      Sh('star', m + S * .02, barY + S * .01, S * .026, S * .026, '#F5B041'),
-      Tx('Rating 4.9/5.0 dari 2.500+ Ulasan Pelanggan  ·  Pilihan Utama Pecinta Kopi', m + S * .06, barY + S * .01, tw - S * .08, S * .024, p.text || '#FFFFFF', {bold: true, font: t.bf}),
+      // Rating bar with hairline divider
+      R(m, barY, tw, S * .044, cardBg, {radius: 4, stroke: borderCol, strokeW: 1}),
+      Tx('SKOR MUTU 94.6 SCA  ·  2.500+ ULASAN KEPUASAN PELANGGAN  ·  SERAHAN TANGAN TERTINGGI', m + S * .02, barY + S * .012, tw - S * .04, S * .022, p.primary, {bold: true, align: 'center', spacing: 2, font: t.bf}),
 
-      R(m, locY, tw, S * .05, '#18120F', {radius: S * .015}),
-      Sh('chevron', m + S * .02, locY + S * .013, S * .024, S * .024, p.primary),
-      Tx('Jl. Senopati No. 18, Jakarta Selatan  |  Buka Setiap Hari: 08.00 - 22.00 WIB', m + S * .055, locY + S * .012, tw - S * .07, S * .024, '#C8BDB0', {font: t.bf}),
+      // Location & Hours
+      R(m, locY, tw, S * .048, '#16110D', {radius: 4, stroke: borderCol, strokeW: 1}),
+      Tx('JL. SENOPATI NO. 18, JAKARTA SELATAN  |  OPERASIONAL: 08.00 - 22.00 WIB', m, locY + S * .014, tw, S * .022, '#C8BDB0', {align: 'center', spacing: 1, font: t.bf}),
 
-      R(m, ctaY, tw, ctaH, p.primary, {radius: S * .02}),
-      Tx(t.cta || 'KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG', m, ctaY + ctaH * .28, tw, S * .034, '#120D0A', {bold: true, align: 'center', font: t.bf}),
+      // Call To Action (CTA) Button
+      R(m, ctaY, tw, ctaH, p.primary, {radius: 4}),
+      Tx(t.cta || 'KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG', m, ctaY + ctaH * .28, tw, S * .03, '#120D0A', {bold: true, align: 'center', spacing: 2, font: t.bf}),
 
-      Tx('Diseduh dengan cinta dan presisi untuk setiap cangkir berharga  ·  @artisancoffee.id', m, ctaY + ctaH + S * .018, tw, S * .022, '#8D7666', {align: 'center', font: t.bf})
+      Tx('Diseduh dengan dedikasi dan presisi untuk setiap cangkir bernilai  ·  @artisancoffee.id', m, ctaY + ctaH + S * .016, tw, S * .02, '#8D7666', {align: 'center', font: t.bf})
     ];
 
     return [{bg: p.bg || '#120D0A', elements: els}];
