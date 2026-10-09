@@ -126,8 +126,11 @@ const Studio = {
       if (res.ok) {
         this.connected = true;
         this.mcpStatus = await res.json();
+        if (this.mcpStatus && this.mcpStatus.token) {
+          this.token = this.mcpStatus.token;
+          lsSet('token', this.mcpStatus.token);
+        }
         lsSet('bridge', this.bridge);
-        if (this.token) lsSet('token', this.token);
         return true;
       }
     } catch {}

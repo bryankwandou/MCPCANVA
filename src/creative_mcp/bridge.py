@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import threading
+import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -242,6 +243,7 @@ def mcp_status() -> dict:
     cat = catalog()
     return {
         "status": "connected",
+        "token": token(),
         "canva_desktop_installed": c_path is not None,
         "canva_desktop_path": str(c_path) if c_path else None,
         "tools": [
@@ -307,6 +309,10 @@ class Handler(BaseHTTPRequestHandler):
             if f.is_relative_to(EDITOR_DIR) and f.is_file():
                 return self._file(f)
             return self._json({"error": "not found"}, 404)
+        if path == "/api/mcp/status":
+            return self._json(mcp_status())
+        if path == "/api/designs":
+            return self._json(list_designs())
         if not self._authed(q):
             return self._json({"error": "bad token"}, 401)
         try:
@@ -367,6 +373,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):  # noqa: N802
         path, q = self._q()
+        if path == "/api/canva/launch":
+            return self._json(launch_canva(self._body()))
         if not self._authed(q):
             return self._json({"error": "bad token"}, 401)
         try:
