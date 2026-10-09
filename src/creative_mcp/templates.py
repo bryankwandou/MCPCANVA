@@ -37,6 +37,64 @@ CANVA_TEMPLATES = {
     "presentation": (1920, 1080, "Presentasi: cover + slide isi + penutup"),
 }
 
+PRESENTATION_THEMES = [
+    ("fintech_ai", "Finansial & FinTech", "Ekosistem Pembayaran Digital Cerdas 2026"),
+    ("saas_enterprise", "Teknologi & SaaS", "Platform Otomasi Operasional Korporat"),
+    ("healthtech_telemed", "Kesehatan & Medis", "Transformasi Layanan Kesehatan Digital"),
+    ("edutech_learning", "Pendidikan & EduTech", "Kurikulum Digital Masa Depan"),
+    ("agritech_smartfarm", "Pertanian & AgriTech", "Modernisasi Rantai Pasok Pangan Nasional"),
+    ("logistics_fleet", "Logistik & Rantai Pasok", "Optimasi Logistik Rantai Dingin & Kargo"),
+    ("clean_energy_solar", "Energi & Lingkungan", "Transisi Energi Bersih Industri 2026"),
+    ("corporate_audit", "Hukum & Tata Kelola", "Kerangka Kepatuhan & Manajemen Risiko"),
+    ("esg_sustainability", "Keberlanjutan & ESG", "Laporan Keberlanjutan & Dampak Sosial"),
+    ("cybersecurity_soc", "Keamanan Siber & IT", "Pertahanan Siber Aktif & Keamanan Cloud"),
+    ("proptech_marketplace", "Properti & Real Estate", "Platform Investasi Properti Digital"),
+    ("retail_omnichannel", "Ritel & E-Commerce", "Ekspansi Ritel Terintegrasi Offline-Online"),
+    ("biotech_pharma", "Bioteknologi & Farmasi", "Riset Terapi Presisi & Kemandirian Farmasi"),
+    ("ev_mobility", "Otomotif & Mobilitas", "Jaringan Pengisian Daya Kendaraan Listrik"),
+    ("cloud_devops", "Cloud & Rekayasa Perangkat Lunak", "Modernisasi Infrastruktur Multi-Cloud"),
+    ("growth_marketing", "Pemasaran & Pertumbuhan", "Strategi Akuisisi & Retensi Pengguna Skala Besar"),
+    ("brand_identity", "Identitas Visual & Merek", "Panduan Merek & Desain Terpadu 2026"),
+    ("hr_talent", "SDM & Budaya Kerja", "Pengembangan Talenta & Tempat Kerja Idaman"),
+    ("legal_tech", "Layanan Hukum & Regulasi", "Manajemen Kontrak Cerdas & Kepatuhan Bisnis"),
+    ("luxury_hospitality", "Pariwisata & Perhotelan", "Pengalaman Menginap Berkelas Dunia"),
+    ("fnb_franchise_expansion", "Kuliner & Waralaba", "Peluang Kemitraan Waralaba Kuliner 2026"),
+    ("gaming_interactive", "Game & Hiburan Digital", "Ekspansi IP Game Mobile Berstandar Global"),
+    ("digital_agency", "Agensi Kreatif & Media", "Kreativitas Berdampak untuk Brand Terdepan"),
+    ("industry_smart_factory", "Manufaktur & Industri", "Digitalisasi Operasi Pabrik Masa Depan"),
+    ("circular_economy", "Ekonomi Sirkular & Daur Ulang", "Ekosistem Pengolahan Sampah Industri Berkelanjutan"),
+    ("wealth_management", "Investasi & Perbankan Swasta", "Pengelolaan Aset Keluarga & Portofolio Strategis"),
+    ("autonomous_drones", "Dirgantara & Drone Otonom", "Inspeksi Udara Cerdas & Logistik Tanpa Awak"),
+    ("media_ott_platform", "Media & Penyiaran Digital", "Platform Konten Sinematik Nusantara"),
+    ("medical_diagnostics", "Alat Kesehatan & Diagnostik", "Perangkat Deteksi Medis Portabel & Cepat"),
+    ("microfinance_umkm", "Inklusi Keuangan & UMKM", "Pemberdayaan Modal Usaha UMKM Indonesia"),
+    ("smart_governance", "Pemerintahan & Pelayanan Publik", "Satu Portal Layanan Terpadu Warga Kota"),
+    ("pharma_distribution", "Rantai Pasok Farmasi", "Jaminan Ketahanan & Distribusi Obat Nasional"),
+    ("telecom_network", "Telekomunikasi & Jaringan", "Penggelaran Jaringan Pita Lebar Berkecepatan Tinggi"),
+    ("port_maritime_logistics", "Maritim & Pelabuhan", "Modernisasi Terminal Peti Kemas Maritim"),
+    ("green_construction", "Konstruksi & Infrastruktur", "Rekayasa Bangunan Gedung Hijau Berkelanjutan"),
+    ("insurtech_digital", "Asuransi & Proteksi", "Proteksi Asuransi Mikro Mudah & Terjangkau"),
+    ("architecture_planning", "Arsitektur & Tata Ruang", "Perencanaan Ruang Hidup Bernapas Alami"),
+    ("management_turnaround", "Konsultasi Manajemen & Strategi", "Restrukturisasi Strategis & Lompatan Performa"),
+    ("culinary_specialty_roastery", "Kuliner & Roastery Kopi", "Eksplorasi Cita Rasa Kopi Nusantara"),
+    ("film_animation_studio", "Perfilman & Animasi", "Kisah Sinematik Animasi Generasi Baru"),
+    ("bigdata_ai_intelligence", "Data & Intelijen Bisnis", "Pengambilan Keputusan Berbasis Intelijen Data"),
+    ("venture_syndicate_fund", "Investasi Modal Ventura", "Investasi pada Pendiri Startup Berdaya Cipta Tinggi"),
+]
+
+PRESENTATION_LAYOUTS = [
+    ("deck_pitch", "Investor Pitch Deck (5 Slides)"),
+    ("deck_report", "Laporan Kinerja Eksekutif (5 Slides)"),
+    ("deck_strategy", "Peta Jalan & Roadmap (5 Slides)"),
+    ("deck_agency", "Portofolio & Agensi (5 Slides)"),
+    ("deck_workshop", "Workshop & Pelatihan (5 Slides)"),
+]
+
+for _t_key, _t_cat, _t_title in PRESENTATION_THEMES:
+    for _l_key, _l_label in PRESENTATION_LAYOUTS:
+        _tpl_id = f"pres_{_t_key}_{_l_key}"
+        CANVA_TEMPLATES[_tpl_id] = (1920, 1080, f"Presentasi 16:9: {_t_cat} — {_t_title} ({_l_label})")
+
 
 def list_templates() -> dict:
     return {"capcut": CAPCUT_TEMPLATES,

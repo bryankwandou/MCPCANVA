@@ -428,6 +428,7 @@ const TEMPLATE_DEFS = [
 ];
 const TEMPLATES = TEMPLATE_DEFS.map(([th, kind, layout, extra], i) => { const t = tplTheme(th, extra);
   return {id: `t${i}`, theme: th, kind, layout, cat: t.cat, name: `${t.cat} · ${(SIZES[kind] || {}).label || kind}`, search: `${t.cat} ${t.tags} ${t.title} ${(SIZES[kind] || {}).label} ${layout}`.toLowerCase(), t}; });
+if (typeof window !== 'undefined') window.TEMPLATES = TEMPLATES;
 function buildTemplate(tp, W, H) { // returns pages with fresh ids
   return JSON.parse(JSON.stringify(LAYOUTS[tp.layout](W, H, tp.t))).map(pg => ({id: uid(), bg: pg.bg, title: pg.title, elements: pg.elements.map(e => ({...e, id: uid()}))}));
 }
