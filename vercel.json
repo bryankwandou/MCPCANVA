@@ -3,5 +3,22 @@
   "framework": null,
   "buildCommand": "",
   "installCommand": "",
-  "outputDirectory": "src/creative_mcp/editor"
+  "outputDirectory": "src/creative_mcp/editor",
+  "rewrites": [
+    { "source": "/api/mcp/status", "destination": "/api/mcp-status.json" },
+    { "source": "/api/designs", "destination": "/api/designs.json" },
+    { "source": "/api/catalog", "destination": "/api/catalog.json" },
+    { "source": "/api/drafts", "destination": "/api/drafts.json" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, X-Bridge-Token, Range" },
+        { "key": "Access-Control-Allow-Private-Network", "value": "true" }
+      ]
+    }
+  ]
 }

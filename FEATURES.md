@@ -13,14 +13,14 @@ Kolom **Paket** = paket yang dibutuhkan di aplikasi aslinya. Kolom **Rakit** = k
 
 ## Canva (38 fitur)
 
-✅ Ada: 21 · 🟡 Sebagian: 5 · 🔗 Lewat akun Anda: 2 · ❌ Tidak: 10
+✅ Ada: 23 · 🟡 Sebagian: 5 · 🔗 Lewat akun Anda: 2 · ❌ Tidak: 8
 
 | Kategori | Fitur | Paket | Rakit | Catatan |
 |---|---|---|---|---|
-| Template | Template siap pakai | Gratis terbatas | 🟡 Sebagian | Rakit: template orisinal 8 ukuran × 5 palet. Library template Canva tidak bisa diakses lewat API. |
+| Template | Template siap pakai | Gratis terbatas | 🟡 Sebagian | Rakit: 210 template presentasi profesional orisinal + template showcase. Library template Canva tidak bisa diakses lewat API. |
 | Template | Ukuran preset & kustom | Gratis | ✅ Ada |  |
 | Template | Magic Design (AI menyusun desain) | Gratis | 🟡 Sebagian | Lewat MCP: canva_make_from_template / capcut_make_from_template. |
-| Elemen | Bentuk, garis, bingkai, badge | Gratis | ✅ Ada |  |
+| Elemen | Library Icon & Bentuk (Lucide & SHP) | Gratis | ✅ Ada | Integrasi library icon Lucide SVG & native SHP shapes (shield, star4, diamond, squircle, badge, tag) dengan drop shadow & badge visual effects. |
 | Elemen | Grafis, stiker & ilustrasi stok | Gratis terbatas | ❌ Tidak | Konten berlisensi Canva. Pakai di Canva dengan akun Anda. |
 | Elemen | Foto, video & audio stok | Gratis terbatas | ❌ Tidak | Pakai foto/video milik sendiri (Upload atau media di komputer). |
 | Teks | Teks, judul & kombinasi font | Gratis | ✅ Ada | Font dari Google Fonts. |
@@ -42,7 +42,7 @@ Kolom **Paket** = paket yang dibutuhkan di aplikasi aslinya. Kolom **Rakit** = k
 | Tata letak | Gradien | Gratis | ✅ Ada |  |
 | Tata letak | Bayangan elemen | Gratis | ✅ Ada |  |
 | Tata letak | Multi-halaman | Gratis | ✅ Ada |  |
-| Tata letak | Animasi elemen & halaman | Gratis terbatas | ❌ Tidak | Belum dibuat. |
+| Tata letak | Animasi elemen & transisi halaman | Gratis terbatas | ✅ Ada | Transisi slide natif (Fade, Slide, Zoom) dan animasi elemen (Fade, Slide, Pop, Staggered delay) terintegrasi ke engine PPTX Canva. |
 | Tata letak | Magic Resize (ubah ukuran desain) | **Pro** | ✅ Ada | Rakit: menu Ubah ukuran (gratis). Versi Canva lewat MCP canva_resize sesuai akun Anda. |
 | Merek & tim | Brand Kit | Gratis terbatas | 🟡 Sebagian | Rakit: palet merek + font. Pro: brand kit lengkap. |
 | Merek & tim | Kolaborasi real-time & komentar | Gratis | ❌ Tidak |  |

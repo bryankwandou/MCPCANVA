@@ -1,0 +1,29 @@
+[
+  {
+    "id": "seminar_kkp_bryan",
+    "title": "Seminar_KKP_Vincentius_Bryan_Kwandou_final4",
+    "width": 1920,
+    "height": 1080,
+    "updated": 1792124400000,
+    "thumb": "assets/artisan_coffee.jpg",
+    "pptx": "assets/Seminar_KKP_Vincentius_Bryan_Kwandou_final4.pptx"
+  },
+  {
+    "id": "presentasi_agentic_ai",
+    "title": "Presentasi_Agentic_AI_2361021",
+    "width": 1920,
+    "height": 1080,
+    "updated": 1792124400000,
+    "thumb": "assets/artisan_coffee.jpg",
+    "pptx": "assets/Presentasi_Agentic_AI_2361021.pptx"
+  },
+  {
+    "id": "artisan-coffee-masterpiece",
+    "title": "Artisan Coffee Masterpiece",
+    "width": 1080,
+    "height": 1350,
+    "updated": 1791483356463,
+    "thumb": "assets/artisan_coffee.jpg",
+    "pptx": "assets/artisan-coffee-canva-template.pptx"
+  }
+]

@@ -56,10 +56,10 @@
   {
    "app": "canva",
    "cat": "Elemen",
-   "name": "Bentuk, garis, bingkai, badge",
+   "name": "Library Icon & Bentuk (Lucide & SHP)",
    "tier": "free",
    "studio": "ada",
-   "note": ""
+   "note": "Integrasi library icon Lucide SVG & native SHP shapes (shield, star4, diamond, squircle, badge, tag) dengan drop shadow & badge visual effects."
   },
   {
    "app": "canva",
@@ -232,10 +232,10 @@
   {
    "app": "canva",
    "cat": "Tata letak",
-   "name": "Animasi elemen & halaman",
+   "name": "Animasi elemen & transisi halaman",
    "tier": "terbatas",
-   "studio": "tidak",
-   "note": "Belum dibuat."
+   "studio": "ada",
+   "note": "Transisi slide natif (Fade, Slide, Zoom) dan animasi elemen (Fade, Slide, Pop, Staggered delay) terintegrasi ke engine PPTX Canva."
   },
   {
    "app": "canva",

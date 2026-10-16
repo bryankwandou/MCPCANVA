@@ -1,0 +1,31 @@
+{
+  "canva": {
+    "user": "Nayrbryan Fans 0",
+    "capabilities": [
+      "autofill",
+      "brand_templates",
+      "design_create",
+      "export",
+      "import",
+      "resize"
+    ],
+    "recent_designs": [
+      {
+        "id": "seminar_kkp_bryan",
+        "title": "Seminar_KKP_Vincentius_Bryan_Kwandou_final4",
+        "edit_url": "https://www.canva.com/folder/all-designs"
+      },
+      {
+        "id": "presentasi_agentic_ai",
+        "title": "Presentasi_Agentic_AI_2361021",
+        "edit_url": "https://www.canva.com/folder/all-designs"
+      },
+      {
+        "id": "artisan-coffee-masterpiece",
+        "title": "Artisan Coffee Masterpiece",
+        "edit_url": "https://www.canva.com/folder/all-designs"
+      }
+    ]
+  },
+  "capcut_projects": []
+}

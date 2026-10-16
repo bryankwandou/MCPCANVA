@@ -968,14 +968,19 @@ async function updateMcpStatusDisplay() {
   const text = $('#mcpNavStatusText');
   const isConn = await Studio.connect();
   pill.classList.toggle('connected', isConn);
-  text.textContent = isConn ? 'MCP Terhubung' : 'MCP Mode Mandiri';
+  const isCloud = Studio.mcpStatus && (Studio.mcpStatus.mode === 'vercel-cloud' || location.protocol === 'https:');
+  text.textContent = isConn ? (isCloud ? 'MCP Cloud Terhubung' : 'MCP Lokal Terhubung') : 'MCP Mode Mandiri';
   $('#editorMcpPill').classList.toggle('connected', isConn);
 
   const resEl = $('#mcpConnResult');
   if (resEl) {
-    resEl.innerHTML = isConn ?
-      `<span style="color:var(--ok)">Terhubung ke Bridge di ${esc(Studio.bridge)}. Canva Desktop terdeteksi siap sync.</span>` :
-      `<span style="color:var(--muted)">Bridge lokal belum aktif. Jalankan server Python di komputer Anda untuk mengaktifkan sinkronisasi otomatis.</span>`;
+    if (isConn) {
+      resEl.innerHTML = isCloud ?
+        `<span style="color:var(--ok)">Terhubung ke Vercel Cloud MCP API di ${esc(Studio.bridge)}. Canva Connect API & sinkronisasi cloud aktif.</span>` :
+        `<span style="color:var(--ok)">Terhubung ke Bridge Lokal di ${esc(Studio.bridge)}. Canva Desktop terdeteksi siap sync.</span>`;
+    } else {
+      resEl.innerHTML = `<span style="color:var(--muted)">Bridge lokal belum aktif. Jalankan server Python di komputer Anda untuk mengaktifkan sinkronisasi otomatis.</span>`;
+    }
   }
 }
 

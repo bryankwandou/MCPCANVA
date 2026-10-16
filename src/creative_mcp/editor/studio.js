@@ -109,19 +109,24 @@ const I18N = {
 };
 
 const Studio = {
-  bridge: PARAMS.bridge || ls('bridge') || (location.protocol === 'http:' && location.hostname === '127.0.0.1' ? location.origin : 'http://127.0.0.1:8765'),
+  bridge: PARAMS.bridge || ls('bridge') || (location.protocol === 'https:' ? location.origin : (location.hostname === '127.0.0.1' || location.hostname === 'localhost' ? location.origin : 'http://127.0.0.1:8765')),
   token: PARAMS.token || ls('token') || '',
   connected: false,
   mcpStatus: null,
 
   async connect() {
-    if (!this.bridge) this.bridge = 'http://127.0.0.1:8765';
+    // If hosted on HTTPS (e.g. Vercel), avoid mixed-content error by defaulting to location.origin
+    if (location.protocol === 'https:' && (!this.bridge || this.bridge.startsWith('http://127.0.0.1') || this.bridge.startsWith('http://localhost'))) {
+      this.bridge = location.origin;
+    }
+    if (!this.bridge) this.bridge = location.origin || 'http://127.0.0.1:8765';
+
     try {
       const headers = {'Content-Type': 'application/json'};
       if (this.token) headers['X-Bridge-Token'] = this.token;
       const res = await fetch(this.bridge + '/api/mcp/status', {
         headers,
-        signal: AbortSignal.timeout(1800)
+        signal: AbortSignal.timeout(2500)
       });
       if (res.ok) {
         this.connected = true;
@@ -134,6 +139,25 @@ const Studio = {
         return true;
       }
     } catch {}
+
+    // Fallback: If same-origin serves /api/mcp/status on Vercel deployment
+    if (this.bridge !== location.origin) {
+      try {
+        const headers = {'Content-Type': 'application/json'};
+        if (this.token) headers['X-Bridge-Token'] = this.token;
+        const res = await fetch(location.origin + '/api/mcp/status', {
+          headers,
+          signal: AbortSignal.timeout(2000)
+        });
+        if (res.ok) {
+          this.connected = true;
+          this.bridge = location.origin;
+          this.mcpStatus = await res.json();
+          lsSet('bridge', this.bridge);
+          return true;
+        }
+      } catch {}
+    }
 
     try {
       const headers = {'Content-Type': 'application/json'};
