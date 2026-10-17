@@ -44,7 +44,11 @@ def ensure_chrome() -> dict:
     exe = _chrome()
     if not exe:
         return {"running": False, "error": "Google Chrome tidak ditemukan"}
-    subprocess.Popen([exe, f"--remote-debugging-port={PORT}", f"--user-data-dir={PROFILE}", "https://www.canva.com/"])
+    # LocalNetworkAccessChecks off: lets the hosted editor (Vercel, https) reach the local bridge
+    # without Chrome's one-time "access devices on your local network" prompt in this automation profile.
+    subprocess.Popen([exe, f"--remote-debugging-port={PORT}", f"--user-data-dir={PROFILE}",
+                      "--disable-features=LocalNetworkAccessChecks,LocalNetworkAccessChecksWarn",
+                      "https://www.canva.com/"])
     for _ in range(20):
         time.sleep(1)
         if _alive():
