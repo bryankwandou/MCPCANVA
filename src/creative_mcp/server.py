@@ -15,6 +15,23 @@ mcp = FastMCP("mcp-canva")
 _canva: CanvaClient | None = None
 
 
+@mcp.tool()
+def canva_browser_status() -> dict:
+    """Check the no-API Canva route: starts Chrome (debug port 9222, signed-in profile) if needed and
+    reports whether canva.com is logged in. Use this before canva_browser_upload."""
+    from . import canva_browser
+    return canva_browser.status()
+
+
+@mcp.tool()
+def canva_browser_upload(files: list[str], wait_s: int = 60) -> dict:
+    """Upload local files to the user's Canva account WITHOUT Canva API credentials, through the
+    signed-in Chrome. PPTX/PDF become editable Canva designs; images/videos land in Uploads.
+    `files` are absolute Windows paths. Returns which files Canva confirmed and a screenshot path."""
+    from . import canva_browser
+    return canva_browser.upload(files, wait_s)
+
+
 def canva() -> CanvaClient:
     global _canva
     if _canva is None:
