@@ -115,11 +115,11 @@ const Studio = {
   mcpStatus: null,
 
   async connect() {
-    // If hosted on HTTPS (e.g. Vercel), avoid mixed-content error by defaulting to location.origin
-    if (location.protocol === 'https:' && (!this.bridge || this.bridge.startsWith('http://127.0.0.1') || this.bridge.startsWith('http://localhost'))) {
-      this.bridge = location.origin;
-    }
-    if (!this.bridge) this.bridge = location.origin || 'http://127.0.0.1:8765';
+    // Always try the local bridge first, also from https (Vercel): browsers treat http://127.0.0.1 as a
+    // trustworthy origin, and the bridge answers the Private Network Access preflight. Chrome may ask once
+    // for "local network access" permission. The Vercel origin only serves static demo JSON, so it must
+    // never count as a real connection.
+    if (!this.bridge || this.bridge === location.origin) this.bridge = 'http://127.0.0.1:8765';
 
     try {
       const headers = {'Content-Type': 'application/json'};
@@ -140,24 +140,6 @@ const Studio = {
       }
     } catch {}
 
-    // Fallback: If same-origin serves /api/mcp/status on Vercel deployment
-    if (this.bridge !== location.origin) {
-      try {
-        const headers = {'Content-Type': 'application/json'};
-        if (this.token) headers['X-Bridge-Token'] = this.token;
-        const res = await fetch(location.origin + '/api/mcp/status', {
-          headers,
-          signal: AbortSignal.timeout(2000)
-        });
-        if (res.ok) {
-          this.connected = true;
-          this.bridge = location.origin;
-          this.mcpStatus = await res.json();
-          lsSet('bridge', this.bridge);
-          return true;
-        }
-      } catch {}
-    }
 
     try {
       const headers = {'Content-Type': 'application/json'};

@@ -200,6 +200,14 @@ def design_to_canva(design: dict) -> dict:
     from .templates import design_to_pptx
 
     path = design_to_pptx(design, HOME / "exports")
+    if not os.getenv("CANVA_ACCESS_TOKEN"):
+        # Tanpa token Connect API: kirim lewat Chrome yang sudah login Canva (CDP).
+        from . import canva_browser
+        res = canva_browser.upload([path])
+        if not res.get("ok"):
+            return {"pptx": path, "error": res.get("error") or "upload lewat browser gagal", "browser": res}
+        return {"pptx": path, "canva": {"job": {"status": "success (via browser)", "result": {"designs": [
+            {"urls": {"edit_url": "https://www.canva.com/folder/uploads"}}]}}}, "browser": res}
     try:
         res = asyncio.run(CanvaClient().import_file(path, design.get("title")))
     except Exception as e:
@@ -236,6 +244,18 @@ def launch_canva(data: dict | None = None) -> dict:
         return {"error": "Hanya didukung di Windows"}
     except Exception as e:
         return {"error": str(e)}
+
+
+TRUSTED_SITES = {"https://mcpcanva.vercel.app", "https://kanvara.vercel.app"}
+
+
+def _trusted_origin(origin: str | None) -> bool:
+    """Same-machine pages and the user's own editor deployments may receive the bridge token."""
+    if not origin:  # direct request (curl, MCP, same-origin GET)
+        return True
+    host = urllib.parse.urlparse(origin).hostname or ""
+    extra = {os.getenv("CREATIVE_EDITOR_URL", "").rstrip("/")} - {""}
+    return host in ("127.0.0.1", "localhost") or origin.rstrip("/") in TRUSTED_SITES | extra
 
 
 def mcp_status() -> dict:
@@ -310,7 +330,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._file(f)
             return self._json({"error": "not found"}, 404)
         if path == "/api/mcp/status":
-            return self._json(mcp_status())
+            st = mcp_status()
+            if not _trusted_origin(self.headers.get("Origin")):
+                st.pop("token", None)  # never hand the bridge token to an unknown website
+            return self._json(st)
         if path == "/api/designs":
             return self._json(list_designs())
         if not self._authed(q):
