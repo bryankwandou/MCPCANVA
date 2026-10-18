@@ -30,5 +30,16 @@ python scripts/verify_connection.py --write
 ```
 Berhasil bila muncul `[OK ] Canva: akun terhubung` dengan nama akun Anda dan desain "Tes MCP …" muncul di Canva.
 
+## Desain native dari HTML (tanpa API, tanpa PPTX)
+Lewat Chrome yang sudah login Canva (debug port 9222):
+
+| Tool | Fungsi |
+|---|---|
+| `canva_html_to_canva(html_path, title)` | Render HTML di headless Chrome; tiap teks jadi kotak teks Canva (posisi, font, ukuran, warna sama), tiap `<img>` jadi gambar Canva, sisanya satu gambar latar |
+| `canva_native_build(spec)` | Rakit desain dari spec JSON `{title, width, height, elements:[image/text]}` |
+| `canva_browser_upload(files)` | Upload file ke Uploads Canva |
+
+Tandai elemen dengan `data-canva="raster"` agar tetap di gambar latar (mis. grup yang diputar). CLI: `mcp-canva html file.html "Judul"`.
+
 ## Deploy editor ke Vercel
 Import repo ini di Vercel; `vercel.json` sudah menyetel output `src/creative_mcp/editor` tanpa build.

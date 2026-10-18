@@ -32,6 +32,27 @@ def canva_browser_upload(files: list[str], wait_s: int = 60) -> dict:
     return canva_browser.upload(files, wait_s)
 
 
+@mcp.tool()
+def canva_native_build(spec: dict) -> dict:
+    """Build a design NATIVELY in the Canva editor (real Canva text boxes + image elements, no PPTX/PDF
+    import) through the signed-in Chrome. spec = {title, width, height, design_url?, elements:[
+    {type:"image", path, x, y, w?, h?} | {type:"text", text, font?, size?, color?, x, y, w?}]} in design px.
+    Returns design_url, added/errors per element and a screenshot path."""
+    from . import canva_native
+    return canva_native.build(spec)
+
+
+@mcp.tool()
+def canva_html_to_canva(html_path: str, title: str | None = None, width: int = 3000, height: int = 1000) -> dict:
+    """Convert an HTML design 1:1 into a NATIVE Canva design: the page is rendered at width x height CSS px,
+    every text node becomes a Canva text box (same position, font, size, colour), every <img> a Canva image,
+    and the remaining shapes/decoration one background image. No PPTX/PDF import. Mark an element
+    data-canva="raster" to keep it inside the background (e.g. rotated groups)."""
+    from . import canva_native, html_to_spec
+    spec = html_to_spec.convert(html_path, title=title, width=width, height=height)
+    return {"spec_elements": len(spec["elements"]), **canva_native.build(spec)}
+
+
 def canva() -> CanvaClient:
     global _canva
     if _canva is None:
@@ -462,6 +483,16 @@ def main() -> None:
     import re
     import sys
 
+    if len(sys.argv) > 2 and sys.argv[1] == "html":  # same code path as the canva_html_to_canva tool
+        import json
+        print(json.dumps(canva_html_to_canva(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None), ensure_ascii=False, indent=2))
+        return
+    if len(sys.argv) > 2 and sys.argv[1] == "native":  # same code path as the canva_native_build tool
+        import json
+        from . import canva_native
+        spec = json.loads(open(sys.argv[2], encoding="utf-8").read())
+        print(json.dumps(canva_native.build(spec), ensure_ascii=False, indent=2))
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "login":
         from .oauth import login
         login()

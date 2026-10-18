@@ -67,7 +67,14 @@ class _Tab:
         time.sleep(6)
         self.ws = websocket.create_connection(self.info["webSocketDebuggerUrl"], suppress_origin=True, timeout=30)
         self.n = 0
+        self.wake()
+
+    def wake(self):
+        """Chrome freezes background tabs: screenshots still work but Runtime.evaluate never answers.
+        Mark the tab active + focused before driving it."""
         self.send("Page.bringToFront")
+        self.send("Page.setWebLifecycleState", {"state": "active"})
+        self.send("Emulation.setFocusEmulationEnabled", {"enabled": True})
         self.send("Emulation.setDeviceMetricsOverride", {"width": 1600, "height": 900, "deviceScaleFactor": 1, "mobile": False})
 
     def send(self, method: str, params: dict | None = None) -> dict:
