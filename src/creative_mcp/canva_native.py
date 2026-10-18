@@ -202,6 +202,34 @@ class Editor:
         return bool(self.t.ev("""(()=>{const want=%s;const norm=s=>(s||'').replace(/[\ufeff\u200b-\u200d]/g,'').replace(/\u00a0/g,' ').trim();
             return [...document.querySelectorAll('p,span,div')].some(e=>e.children.length<3&&norm(e.innerText)===want)})()""" % json.dumps(text.strip())))
 
+    DEFAULT_TEXTS = ("Your paragraph text", "Add a heading", "Add a subheading", "Add a little bit of body text")
+
+    def remove_default_texts(self) -> int:
+        """Delete text boxes still holding Canva's placeholder text (left behind when typing did not land)."""
+        find = """(()=>{const want=%s;const norm=s=>(s||'').replace(/[\\ufeff\\u200b-\\u200d]/g,'').replace(/\\u00a0/g,' ').trim();
+            const e=[...document.querySelectorAll('p,span,div')].find(e=>e.children.length<3&&want.includes(norm(e.innerText))&&e.getBoundingClientRect().width>0);
+            if(!e)return null;const r=e.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""" % json.dumps(list(self.DEFAULT_TEXTS))
+        removed = 0
+        for _ in range(6):
+            self.focus_workspace()
+            p = self.t.ev(find)
+            if not p:
+                break
+            self.click(p[0], p[1]); time.sleep(0.6)
+            if self.t.ev("document.activeElement && document.activeElement.isContentEditable"):
+                self.key("Escape"); time.sleep(0.4)  # leave text editing, keep the box selected
+            self.assert_single()
+            # only delete when the selection is really a text box (text toolbar shows the font size field);
+            # clicking may hit the background image under the placeholder, which must never be deleted
+            if not self.t.ev("!!document.querySelector('input[aria-label=\"Font size\"]')"):
+                self.key("Escape")
+                raise RuntimeError("teks bawaan tidak bisa dipilih tanpa memilih elemen lain; tidak dihapus")
+            self.key("Delete"); time.sleep(0.8)
+            removed += 1
+        if self.t.ev(find):
+            raise RuntimeError("teks bawaan Canva masih tersisa di desain")
+        return removed
+
     def focus_workspace(self):
         """Deselect everything and give the editor keyboard focus by clicking the empty grey gap
         between the page and the "Add page" bar."""
@@ -359,8 +387,18 @@ def build(spec: dict) -> dict:
             except Exception as ex:  # keep going: one failed element should not lose the rest
                 errors.append({"element": i, "error": str(ex)})
         ed.key("Escape"); ed.key("Escape")
+        removed = 0
+        try:  # never report success while a placeholder box sits on the page
+            removed = ed.remove_default_texts()
+        except Exception as ex:
+            errors.append({"element": None, "error": f"pembersihan teks bawaan: {ex}"})
+        missing = [i for i in done if spec["elements"][i]["type"] == "text" and not ed.text_on_page(spec["elements"][i]["text"])]
+        for i in missing:
+            done.remove(i)
+            errors.append({"element": i, "error": "teks tidak ada di desain setelah build"})
         time.sleep(3)
         shot = tab.screenshot(Path.home() / ".creative-mcp" / "canva_native_last.png")
-        return {"ok": not errors, "design_url": tab.ev("location.href"), "added": done, "errors": errors, "screenshot": shot}
+        return {"ok": not errors, "design_url": tab.ev("location.href"), "added": done, "errors": errors,
+                "default_text_removed": removed, "screenshot": shot}
     finally:
         tab.ws.close()  # leave the editor tab open for the user

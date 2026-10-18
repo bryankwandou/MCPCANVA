@@ -91,8 +91,12 @@ class _Headless:
 
 
 def convert(html_path: str, out_dir: str | None = None, width: int = 3000, height: int = 1000,
-            bg_scale: int = 2, title: str | None = None) -> dict:
-    """Render html_path and return a canva_native spec (also written to <out_dir>/<name>.canva.json)."""
+            bg_scale: int = 2, title: str | None = None, scale: float = 1) -> dict:
+    """Render html_path and return a canva_native spec (also written to <out_dir>/<name>.canva.json).
+    scale > 1 makes an HD design: the Canva page is width*scale x height*scale, the background is rendered
+    at that resolution (or higher) and every position/size is multiplied, so the layout stays identical."""
+    k = float(scale)
+    bg_scale = max(bg_scale, k)
     html = Path(html_path).resolve()
     out = Path(out_dir).resolve() if out_dir else html.parent / (html.stem + "-canva")
     out.mkdir(parents=True, exist_ok=True)
@@ -114,20 +118,20 @@ def convert(html_path: str, out_dir: str | None = None, width: int = 3000, heigh
     finally:
         hb.close()
 
-    elements = [{"type": "image", "path": str(bg), "x": 0, "y": 0, "w": width}]
+    elements = [{"type": "image", "path": str(bg), "x": 0, "y": 0, "w": round(width * k)}]
     for it in data["items"]:
         if it["type"] == "image":
             src = (html.parent / it["src"]).resolve()
-            elements.append({"type": "image", "path": str(src), "x": round(it["x"]), "y": round(it["y"]), "w": round(it["w"])})
+            elements.append({"type": "image", "path": str(src), "x": round(it["x"] * k), "y": round(it["y"] * k), "w": round(it["w"] * k)})
     for it in data["items"]:
         if it["type"] != "text":
             continue
-        size = round(it["px"] * PX_TO_CANVA, 1)
+        size = round(it["px"] * PX_TO_CANVA * k, 1)
         box_h = it["px"] * CANVA_LINE * it["lines"]
         elements.append({"type": "text", "text": it["text"], "font": it["font"], "size": size, "color": it["color"],
                          "bold": it["weight"] >= 700 and it["font"] not in ("Alfa Slab One", "Archivo Black", "Anton"),
-                         "x": round(it["x"]), "y": round(it["y"] + it["h"] / 2 - box_h / 2 + it["px"] * 0.12),
-                         "w": round(it["w"] * 1.12 + 24)})  # slack so Canva's metrics never wrap; text is left-aligned
-    spec = {"title": title or html.stem, "width": width, "height": height, "source_html": str(html), "elements": elements}
+                         "x": round(it["x"] * k), "y": round((it["y"] + it["h"] / 2 - box_h / 2 + it["px"] * 0.12) * k),
+                         "w": round((it["w"] * 1.12 + 24) * k)})  # slack so Canva's metrics never wrap; text is left-aligned
+    spec = {"title": title or html.stem, "width": round(width * k), "height": round(height * k), "source_html": str(html), "elements": elements}
     (out / (html.stem + ".canva.json")).write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")
     return spec

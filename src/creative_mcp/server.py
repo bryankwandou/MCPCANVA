@@ -43,13 +43,15 @@ def canva_native_build(spec: dict) -> dict:
 
 
 @mcp.tool()
-def canva_html_to_canva(html_path: str, title: str | None = None, width: int = 3000, height: int = 1000) -> dict:
+def canva_html_to_canva(html_path: str, title: str | None = None, width: int = 3000, height: int = 1000,
+                        scale: float = 1) -> dict:
     """Convert an HTML design 1:1 into a NATIVE Canva design: the page is rendered at width x height CSS px,
     every text node becomes a Canva text box (same position, font, size, colour), every <img> a Canva image,
     and the remaining shapes/decoration one background image. No PPTX/PDF import. Mark an element
-    data-canva="raster" to keep it inside the background (e.g. rotated groups)."""
+    data-canva="raster" to keep it inside the background (e.g. rotated groups). scale=3 gives an HD design
+    (e.g. a 1080 px HTML logo becomes a 3240 px Canva page with a 3240 px background)."""
     from . import canva_native, html_to_spec
-    spec = html_to_spec.convert(html_path, title=title, width=width, height=height)
+    spec = html_to_spec.convert(html_path, title=title, width=width, height=height, scale=scale)
     return {"spec_elements": len(spec["elements"]), **canva_native.build(spec)}
 
 
