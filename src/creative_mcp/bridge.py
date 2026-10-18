@@ -468,10 +468,10 @@ def start() -> str:
 def studio_url() -> dict:
     base = start()
     frag = urllib.parse.urlencode({"bridge": base, "token": token()})
-    out = {"local": f"{base}/#{frag}"}
+    out = {"local": f"{base}/studio.html#{frag}"}
     hosted = os.getenv("CREATIVE_EDITOR_URL")
     if hosted:
-        out["vercel"] = f"{hosted.rstrip('/')}/#{frag}"
+        out["vercel"] = f"{hosted.rstrip('/')}/studio.html#{frag}"
     return out
 
 

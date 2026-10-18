@@ -56,6 +56,29 @@ class Editor:
     def type(self, text):
         self.t.send("Input.insertText", {"text": text})
 
+    def fill_input(self, x, y, value, clicks=1, enter=True, locate=None):
+        """Click an <input>, then replace its value. Never sends Ctrl+A: if the click missed the input,
+        Ctrl+A would select every element on the page and the next edits would hit all of them.
+        `locate` (JS returning [x, y]) re-measures the input between attempts, e.g. while a panel slides in."""
+        for attempt in range(3):
+            if locate and attempt:
+                time.sleep(0.8)
+                p = self.t.ev(locate)
+                if p:
+                    x, y = p[0], p[1]
+            self.click(x, y, clicks)
+            time.sleep(0.25)
+            if self.t.ev("""(()=>{const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA)$/.test(a.tagName))return false;
+                a.select();return true})()"""):
+                self.type(str(value))
+                if enter:
+                    self.key("Enter")
+                return
+            if not locate:
+                time.sleep(0.6)
+        self.key("Escape")
+        raise RuntimeError(f"kolom input tidak fokus di ({x:.0f},{y:.0f}); dibatalkan")
+
     def button(self, cond_js: str, wait=8.0):
         """Click the first button whose label/text satisfies cond_js (uses variable t)."""
         pos = self.t.wait(_BTN % cond_js, wait)
@@ -68,10 +91,7 @@ class Editor:
         pos = self.t.ev(_FIELD % json.dumps(label))
         if not pos:
             return False
-        self.click(pos[0], pos[1], 3)
-        self.key("a", ctrl=True)
-        self.type(str(value))
-        self.key("Enter")
+        self.fill_input(pos[0], pos[1], value, clicks=3)
         time.sleep(0.5)
         return True
 
@@ -81,6 +101,7 @@ class Editor:
             self.t.wait(_FIELD % json.dumps("X"), 6)
 
     def place(self, x, y, w=None, h=None, keep_ratio=True, is_text=False):
+        self.assert_single()
         self.position_panel()
         lock = self.t.ev("""(()=>{const f=[...document.querySelectorAll('input')].find(i=>{const l=i.closest('label')||i.parentElement?.parentElement;
             return (l?.innerText||'').trim().startsWith('Height')});if(!f)return null;const fr=f.getBoundingClientRect();
@@ -126,19 +147,41 @@ class Editor:
         self.place(x, y, w, h, keep_ratio=h is None)
 
     def add_text(self, text, font=None, size=None, color=None, x=0, y=0, w=None, bold=False, align="left"):
-        self.key("Escape"); self.key("Escape")
+        self.focus_workspace()
         self.key("t")
         if not self.t.wait("document.activeElement && document.activeElement.isContentEditable", 6):
             raise RuntimeError("kotak teks tidak terbuka")
-        self.key("a", ctrl=True)
+        self.key("a", ctrl=True)  # inside the new box only: the default text
         self.type(text)
+        time.sleep(0.5)
+        typed = self.t.ev("document.activeElement && document.activeElement.isContentEditable ? document.activeElement.innerText : null")
+        clean = re.sub(r"[﻿​‌‍]", "", typed or "").replace(" ", " ").strip()
+        if clean != text.strip():
+            # the keystrokes did not land in a fresh text box: revert and stop before anything else is touched
+            self.key("Escape"); self.key("z", ctrl=True); self.key("Escape")
+            raise RuntimeError(f"teks tidak masuk ke kotak teks baru (terbaca: {typed!r}); dibatalkan")
         self.key("Escape")
-        time.sleep(0.6)
+        time.sleep(0.8)
+        self.assert_single()
+        if not self.text_on_page(text):
+            # Canva sometimes drops the first keystrokes right after uploads: edit the box again
+            self.key("Enter")
+            if self.t.wait("document.activeElement && document.activeElement.isContentEditable", 4):
+                self.key("a", ctrl=True); self.type(text); time.sleep(0.5)
+            self.key("Escape"); time.sleep(0.8)
+            self.assert_single()
+            if not self.text_on_page(text):
+                self.key("Delete")  # the selection is our new box (checked single above)
+                raise RuntimeError("teks tidak tersimpan di desain; kotak teks baru dihapus")
         if font:
             self.button("t.startsWith('Toggle font selector')")
-            box = self.t.wait("""(()=>{const i=[...document.querySelectorAll('input')].find(i=>i.getBoundingClientRect().x<420&&i.getBoundingClientRect().width>0&&/font|try|search/i.test((i.placeholder||'')+(i.getAttribute('aria-label')||'')));
-                if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""", 6)
-            self.click(box[0], box[1]); self.key("a", ctrl=True); self.type(font)
+            find = """(()=>{const i=[...document.querySelectorAll('input')].find(i=>i.getBoundingClientRect().x<420&&i.getBoundingClientRect().width>0&&/font|try|search/i.test((i.placeholder||'')+(i.getAttribute('aria-label')||'')));
+                if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()"""
+            time.sleep(1.0)  # the font panel slides in
+            box = self.t.wait(find, 6)
+            if not box:
+                raise RuntimeError("kolom cari font tidak ketemu")
+            self.fill_input(box[0], box[1], font, enter=False, locate=find)
             time.sleep(1.5)
             self.button("t.split(String.fromCharCode(10))[0].trim()===%s||t.startsWith(%s+',')" % (json.dumps(font), json.dumps(font)), wait=10)
             time.sleep(1)
@@ -146,14 +189,38 @@ class Editor:
             p = self.t.ev("""(()=>{const i=document.querySelector('input[aria-label="Font size"]')||[...document.querySelectorAll('input')].find(i=>{const r=i.getBoundingClientRect();return r.y<120&&r.width<80&&r.width>20});
                 if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""")
             if p:
-                self.click(p[0], p[1], 3); self.key("a", ctrl=True); self.type(str(size)); self.key("Enter"); time.sleep(0.8)
+                self.fill_input(p[0], p[1], size, clicks=3); time.sleep(0.8)
+                self.assert_single()
+        self.assert_single()
         if color:
             self.set_text_color(color)
+            self.assert_single()
         if bold:
             self.set_bold(True)
         if align:
             self.set_align(align)
         self.place(x, y, w, is_text=True)
+
+    def text_on_page(self, text) -> bool:
+        """Is `text` rendered in the design (Canva keeps text elements as DOM nodes)?"""
+        return bool(self.t.ev("""(()=>{const want=%s;const norm=s=>(s||'').replace(/[\ufeff\u200b-\u200d]/g,'').replace(/\u00a0/g,' ').trim();
+            return [...document.querySelectorAll('p,span,div')].some(e=>e.children.length<3&&norm(e.innerText)===want)})()""" % json.dumps(text.strip())))
+
+    def focus_workspace(self):
+        """Deselect everything and give the editor keyboard focus by clicking the empty grey gap
+        between the page and the "Add page" bar."""
+        self.key("Escape"); self.key("Escape")
+        p = self.t.ev("""(()=>{const b=[...document.querySelectorAll('button')].find(b=>/Add page/.test(b.innerText||''));
+            if(!b)return null;const r=b.getBoundingClientRect();return [r.x+r.width/2,r.y-10]})()""")
+        if p:
+            self.click(p[0], p[1]); time.sleep(0.4)
+        self.key("Escape")
+
+    def assert_single(self):
+        """Refuse to restyle/move when several elements are selected (Canva then offers "Group")."""
+        if self.t.ev("[...document.querySelectorAll('button')].some(b=>(b.innerText||'').trim()==='Group'&&b.getBoundingClientRect().width>0)"):
+            self.key("Escape")
+            raise RuntimeError("lebih dari satu elemen terpilih; dibatalkan agar elemen lain tidak berubah")
 
     def set_bold(self, on=True):
         st = self.t.ev(_BTN % "t==='Bold'")
@@ -179,7 +246,7 @@ class Editor:
             if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""", 6)
         if not inp:
             raise RuntimeError("input hex warna tidak ketemu")
-        self.click(inp[0], inp[1], 3); self.key("a", ctrl=True); self.type(hex_color.lstrip("#")); self.key("Enter")
+        self.fill_input(inp[0], inp[1], hex_color.lstrip("#"), clicks=3)
         time.sleep(0.8)
         self.key("Escape")
 
@@ -187,7 +254,7 @@ class Editor:
         p = self.t.ev("""(()=>{const i=document.querySelector('input[aria-label="Design title"]');if(!i)return null;
             const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""")
         if p:
-            self.click(p[0], p[1]); self.key("a", ctrl=True); self.type(title); self.key("Enter")
+            self.fill_input(p[0], p[1], title)
 
 
 def _find_tab(pred) -> dict | None:
@@ -214,7 +281,7 @@ def create_design(width: int, height: int) -> str:
         if not boxes:
             raise RuntimeError("dialog Custom size tidak muncul")
         for (bx, by), v in zip(boxes, (width, height)):
-            ed.click(bx, by, 3); ed.key("a", ctrl=True); ed.type(str(v))
+            ed.fill_input(bx, by, v, clicks=3, enter=False)
         time.sleep(1)
         before = {t["id"] for t in json.load(urllib.request.urlopen(BASE + "/json", timeout=5))}
         ed.button("t==='Create new design'")
