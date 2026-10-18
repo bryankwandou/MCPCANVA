@@ -186,11 +186,7 @@ class Editor:
             self.button("t.split(String.fromCharCode(10))[0].trim()===%s||t.startsWith(%s+',')" % (json.dumps(font), json.dumps(font)), wait=10)
             time.sleep(1)
         if size:
-            p = self.t.ev("""(()=>{const i=document.querySelector('input[aria-label="Font size"]')||[...document.querySelectorAll('input')].find(i=>{const r=i.getBoundingClientRect();return r.y<120&&r.width<80&&r.width>20});
-                if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""")
-            if p:
-                self.fill_input(p[0], p[1], size, clicks=3); time.sleep(0.8)
-                self.assert_single()
+            self.set_font_size(size)
         self.assert_single()
         if color:
             self.set_text_color(color)
@@ -221,6 +217,26 @@ class Editor:
         if self.t.ev("[...document.querySelectorAll('button')].some(b=>(b.innerText||'').trim()==='Group'&&b.getBoundingClientRect().width>0)"):
             self.key("Escape")
             raise RuntimeError("lebih dari satu elemen terpilih; dibatalkan agar elemen lain tidak berubah")
+
+    def set_font_size(self, size):
+        """Type the size into the toolbar field and read it back; Canva sometimes ignores the first entry."""
+        find = """(()=>{const i=document.querySelector('input[aria-label="Font size"]');if(!i)return null;
+            const r=i.getBoundingClientRect();return r.width?[r.x+r.width/2,r.y+r.height/2,i.value]:null})()"""
+        want = float(size)
+        for _ in range(3):
+            p = self.t.wait(find, 5)
+            if not p:
+                raise RuntimeError("kolom ukuran font tidak ketemu")
+            try:
+                if abs(float(str(p[2]).replace(",", ".")) - want) < 0.05:
+                    return
+            except ValueError:
+                pass
+            self.fill_input(p[0], p[1], ("%g" % want), clicks=3, locate=find)
+            time.sleep(0.9)
+            self.assert_single()
+        p = self.t.ev(find)
+        raise RuntimeError(f"ukuran font tidak berubah ke {size} (terbaca {p and p[2]})")
 
     def set_bold(self, on=True):
         st = self.t.ev(_BTN % "t==='Bold'")
