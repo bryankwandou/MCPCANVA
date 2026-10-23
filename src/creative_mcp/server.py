@@ -55,6 +55,53 @@ def canva_html_to_canva(html_path: str, title: str | None = None, width: int = 3
     return {"spec_elements": len(spec["elements"]), **canva_native.build(spec)}
 
 
+@mcp.tool()
+def canva_html_deck_to_canva(html_paths: list[str], title: str | None = None, width: int = 1920, height: int = 1080,
+                             design_url: str | None = None, min_font_pt: float | None = 40) -> dict:
+    """Several HTML files (one per slide, in order) -> ONE multi-page native Canva design: each file becomes a
+    page with native text boxes, native images and its decoration as the page background. Wrapped text keeps
+    the browser's line breaks. With design_url the pages are appended to that design (e.g. to resume). min_font_pt (default 40, the
+    presentation minimum) refuses slides with smaller text before anything is built; None turns the check off."""
+    from . import canva_native, html_to_spec
+    spec = html_to_spec.convert_pages(html_paths, title=title, width=width, height=height, min_font_pt=min_font_pt)
+    if design_url:
+        spec["design_url"] = design_url
+    return {"spec_pages": len(spec["pages"]), **canva_native.build(spec)}
+
+
+@mcp.tool()
+def canva_keys(design_url: str, keys: list[str], click_xy: list[float] | None = None) -> dict:
+    """Press keyboard shortcuts in a Canva design, in order, through the signed-in Chrome. Each item is a combo
+    such as "ctrl+z" (undo), "ctrl+y" / "ctrl+shift+z" (redo), "ctrl+c", "ctrl+v", "ctrl+x", "ctrl+a",
+    "shift+ctrl+x", "ctrl+d" (duplicate), "ctrl+g" / "ctrl+shift+g" (group/ungroup), "Delete", "Escape",
+    "ArrowLeft", "shift+ArrowUp", "alt+shift+t", "F2". Optional click_xy=[x, y] (viewport px) is clicked first,
+    e.g. to select an element. Returns the page counter and a screenshot after the keys."""
+    import time
+    from pathlib import Path
+    from . import canva_native
+    tab = canva_native._open_editor(design_url)
+    try:
+        ed = canva_native.Editor(tab)
+        if click_xy:
+            ed.click(click_xy[0], click_xy[1])
+        for k in keys:
+            ed.hotkey(k)
+            time.sleep(0.6)
+        shot = tab.screenshot(Path.home() / ".creative-mcp" / "canva_keys_last.png")
+        return {"ok": True, "pressed": keys, "page": ed.page_counter(), "screenshot": shot}
+    finally:
+        tab.ws.close()
+
+
+@mcp.tool()
+def canva_shortcut_selftest(design_url: str | None = None) -> dict:
+    """Prove the keyboard shortcuts work in the live Canva editor: on a scratch design (new 800x600 one when
+    design_url is not given) it adds a text box and checks Ctrl+C/Ctrl+V, Ctrl+Z, Ctrl+Y, Ctrl+A, Ctrl+X,
+    Shift+Ctrl+X, Ctrl+D and Delete by counting the text boxes after each step."""
+    from . import canva_native
+    return canva_native.shortcut_selftest(design_url)
+
+
 def canva() -> CanvaClient:
     global _canva
     if _canva is None:

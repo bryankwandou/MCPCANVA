@@ -32,6 +32,54 @@ _BTN = """(()=>{const b=[...document.querySelectorAll('button,[role=button],[rol
   const t=(b.getAttribute('aria-label')||b.innerText||'').trim();return %s});if(!b)return null;
   const r=b.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2,b.getAttribute('aria-pressed')]})()"""
 
+# modifier name -> (CDP bit, key, code, windows virtual key)
+MODS = {"alt": (1, "Alt", "AltLeft", 18), "ctrl": (2, "Control", "ControlLeft", 17),
+        "meta": (4, "Meta", "MetaLeft", 91), "shift": (8, "Shift", "ShiftLeft", 16)}
+MOD_ALIASES = {"control": "ctrl", "ctl": "ctrl", "cmd": "meta", "win": "meta", "option": "alt"}
+_NAMED = {  # key -> (code, windows virtual key, text)
+    "Enter": ("Enter", 13, None),"Escape": ("Escape", 27, None), "Esc": ("Escape", 27, None),
+    "Delete": ("Delete", 46, None), "Del": ("Delete", 46, None), "Backspace": ("Backspace", 8, None),
+    "Tab": ("Tab", 9, None), "Space": ("Space", 32, " "), " ": ("Space", 32, " "),
+    "ArrowLeft": ("ArrowLeft", 37, None), "ArrowUp": ("ArrowUp", 38, None), "ArrowRight": ("ArrowRight", 39, None),
+    "ArrowDown": ("ArrowDown", 40, None), "Left": ("ArrowLeft", 37, None), "Up": ("ArrowUp", 38, None),
+    "Right": ("ArrowRight", 39, None), "Down": ("ArrowDown", 40, None),
+    "Home": ("Home", 36, None), "End": ("End", 35, None), "PageUp": ("PageUp", 33, None), "PageDown": ("PageDown", 34, None),
+    "Insert": ("Insert", 45, None),
+    **{f"F{i}": (f"F{i}", 111 + i, None) for i in range(1, 13)},
+}
+# punctuation: key -> (code, vk, shifted key)
+_PUNCT = {"=": ("Equal", 187, "+"), "-": ("Minus", 189, "_"), "[": ("BracketLeft", 219, "{"), "]": ("BracketRight", 221, "}"),
+          ";": ("Semicolon", 186, ":"), "'": ("Quote", 222, '"'), ",": ("Comma", 188, "<"), ".": ("Period", 190, ">"),
+          "/": ("Slash", 191, "?"), "\\": ("Backslash", 220, "|"), "`": ("Backquote", 192, "~")}
+_SHIFT_DIGITS = ")!@#$%^&*("
+# Chrome editing commands that go with the standard shortcuts (CDP does not run them for synthetic keys otherwise)
+EDIT_COMMANDS = {(frozenset({"ctrl"}), "KeyC"): "copy", (frozenset({"ctrl"}), "KeyV"): "paste",
+                 (frozenset({"ctrl"}), "KeyX"): "cut", (frozenset({"ctrl"}), "KeyA"): "selectAll",
+                 (frozenset({"ctrl"}), "KeyZ"): "undo", (frozenset({"ctrl"}), "KeyY"): "redo",
+                 (frozenset({"ctrl", "shift"}), "KeyZ"): "redo"}
+
+
+def _flat(s) -> str:
+    """Text compared without zero-width chars, nbsp or line-break differences."""
+    return re.sub(r"\s+", " ", re.sub("[﻿​-‍]", "", s or "").replace(" ", " ")).strip()
+
+
+def key_spec(k: str, shift: bool = False) -> dict:
+    """CDP key fields for one key name ("a", "Z", "7", "=", "Enter", "ArrowLeft", "F5")."""
+    if k in _NAMED or k.capitalize() in _NAMED:
+        code, vk, text = _NAMED.get(k) or _NAMED[k.capitalize()]
+        return {"key": " " if code == "Space" else code, "code": code, "vk": vk, "text": text}
+    if len(k) == 1 and k.isalpha():
+        return {"key": k.upper() if shift else k.lower(), "code": "Key" + k.upper(), "vk": ord(k.upper()),
+                "text": k.upper() if shift else k.lower()}
+    if len(k) == 1 and k.isdigit():
+        return {"key": _SHIFT_DIGITS[int(k)] if shift else k, "code": "Digit" + k, "vk": ord(k),
+                "text": _SHIFT_DIGITS[int(k)] if shift else k}
+    if k in _PUNCT:
+        code, vk, sk = _PUNCT[k]
+        return {"key": sk if shift else k, "code": code, "vk": vk, "text": sk if shift else k}
+    raise ValueError(f"tombol tidak dikenal: {k!r}")
+
 
 class Editor:
     def __init__(self, tab: _Tab):
@@ -45,13 +93,64 @@ class Editor:
             s("Input.dispatchMouseEvent", {"type": "mousePressed", "x": x, "y": y, "button": button, "clickCount": i})
             s("Input.dispatchMouseEvent", {"type": "mouseReleased", "x": x, "y": y, "button": button, "clickCount": i})
 
-    def key(self, k, ctrl=False, shift=False):
-        code = {"Enter": 13, "Escape": 27, "Delete": 46}.get(k) or ord(k.upper())
-        base = {"key": k, "code": k if len(k) > 1 else "Key" + k.upper(), "windowsVirtualKeyCode": code, "modifiers": (2 if ctrl else 0) | (8 if shift else 0)}
-        self.t.send("Input.dispatchKeyEvent", {"type": "rawKeyDown", **base})
-        if len(k) == 1 and not ctrl and not shift:
-            self.t.send("Input.dispatchKeyEvent", {"type": "char", "text": k, **base})
-        self.t.send("Input.dispatchKeyEvent", {"type": "keyUp", **base})
+    def key(self, k, ctrl=False, shift=False, alt=False):
+        self.hotkey("+".join([m for m, on in (("ctrl", ctrl), ("shift", shift), ("alt", alt)) if on] + [k]))
+
+    def hotkey(self, combo: str):
+        """Press a key combination, e.g. "ctrl+z", "ctrl+shift+z", "shift+ctrl+x", "alt+shift+t", "Delete",
+        "ArrowLeft", "F2". Modifiers are held down around the key like a real keyboard, and editing shortcuts
+        (copy/paste/cut/undo/redo/select all) also carry Chrome's editing command so text fields react too."""
+        parts = [p.strip() for p in combo.replace(" ", "").split("+") if p.strip()]
+        if not parts:
+            raise ValueError("kombinasi tombol kosong")
+        mods = {MOD_ALIASES.get(p.lower(), p.lower()) for p in parts[:-1]}
+        bad = mods - set(MODS)
+        if bad:
+            raise ValueError(f"modifier tidak dikenal: {sorted(bad)}")
+        k = parts[-1]
+        spec = key_spec(k, "shift" in mods)
+        mask = sum(MODS[m][0] for m in mods)
+        held = 0
+        for m in ("ctrl", "alt", "shift", "meta"):  # press modifiers first
+            if m in mods:
+                held |= MODS[m][0]
+                self.t.send("Input.dispatchKeyEvent", {"type": "rawKeyDown", "key": MODS[m][1], "code": MODS[m][2],
+                                                       "windowsVirtualKeyCode": MODS[m][3], "modifiers": held})
+        ev = {"key": spec["key"], "code": spec["code"], "windowsVirtualKeyCode": spec["vk"], "modifiers": mask}
+        cmd = EDIT_COMMANDS.get((frozenset(mods), spec["code"]))
+        self.t.send("Input.dispatchKeyEvent", {"type": "rawKeyDown", **ev, **({"commands": [cmd]} if cmd else {})})
+        if spec.get("text") and not (mods & {"ctrl", "alt", "meta"}):
+            self.t.send("Input.dispatchKeyEvent", {"type": "char", "text": spec["text"], **ev})
+        self.t.send("Input.dispatchKeyEvent", {"type": "keyUp", **ev})
+        for m in ("meta", "shift", "alt", "ctrl"):  # release in reverse order
+            if m in mods:
+                held &= ~MODS[m][0]
+                self.t.send("Input.dispatchKeyEvent", {"type": "keyUp", "key": MODS[m][1], "code": MODS[m][2],
+                                                       "windowsVirtualKeyCode": MODS[m][3], "modifiers": held})
+
+    # Canva editor shortcuts (Windows). Each one presses the real key combination.
+    def undo(self): self.hotkey("ctrl+z")
+    def redo(self): self.hotkey("ctrl+y")
+    def copy(self): self.hotkey("ctrl+c")
+    def paste(self): self.hotkey("ctrl+v")
+    def cut(self): self.hotkey("ctrl+x")
+    def select_all(self): self.hotkey("ctrl+a")
+    def duplicate(self): self.hotkey("ctrl+d")
+    def group(self): self.hotkey("ctrl+g")
+    def ungroup(self): self.hotkey("ctrl+shift+g")
+
+    def stable_button(self, cond_js: str, wait=20.0):
+        """Like button(), but only clicks once the button has stopped moving (carousels, hydrating pages)."""
+        end = time.time() + wait
+        last = None
+        while time.time() < end:
+            pos = self.t.ev(_BTN % cond_js)
+            if pos and last and abs(pos[0] - last[0]) < 1 and abs(pos[1] - last[1]) < 1:
+                self.click(pos[0], pos[1])
+                return pos
+            last = pos
+            time.sleep(0.7)
+        raise RuntimeError(f"tombol tidak ketemu/tidak stabil: {cond_js}")
 
     def type(self, text):
         self.t.send("Input.insertText", {"text": text})
@@ -152,11 +251,10 @@ class Editor:
         if not self.t.wait("document.activeElement && document.activeElement.isContentEditable", 6):
             raise RuntimeError("kotak teks tidak terbuka")
         self.key("a", ctrl=True)  # inside the new box only: the default text
-        self.type(text)
+        self.type_lines(text)
         time.sleep(0.5)
         typed = self.t.ev("document.activeElement && document.activeElement.isContentEditable ? document.activeElement.innerText : null")
-        clean = re.sub(r"[﻿​‌‍]", "", typed or "").replace(" ", " ").strip()
-        if clean != text.strip():
+        if _flat(typed) != _flat(text):
             # the keystrokes did not land in a fresh text box: revert and stop before anything else is touched
             self.key("Escape"); self.key("z", ctrl=True); self.key("Escape")
             raise RuntimeError(f"teks tidak masuk ke kotak teks baru (terbaca: {typed!r}); dibatalkan")
@@ -167,24 +265,14 @@ class Editor:
             # Canva sometimes drops the first keystrokes right after uploads: edit the box again
             self.key("Enter")
             if self.t.wait("document.activeElement && document.activeElement.isContentEditable", 4):
-                self.key("a", ctrl=True); self.type(text); time.sleep(0.5)
+                self.key("a", ctrl=True); self.type_lines(text); time.sleep(0.5)
             self.key("Escape"); time.sleep(0.8)
             self.assert_single()
             if not self.text_on_page(text):
                 self.key("Delete")  # the selection is our new box (checked single above)
                 raise RuntimeError("teks tidak tersimpan di desain; kotak teks baru dihapus")
         if font:
-            self.button("t.startsWith('Toggle font selector')")
-            find = """(()=>{const i=[...document.querySelectorAll('input')].find(i=>i.getBoundingClientRect().x<420&&i.getBoundingClientRect().width>0&&/font|try|search/i.test((i.placeholder||'')+(i.getAttribute('aria-label')||'')));
-                if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()"""
-            time.sleep(1.0)  # the font panel slides in
-            box = self.t.wait(find, 6)
-            if not box:
-                raise RuntimeError("kolom cari font tidak ketemu")
-            self.fill_input(box[0], box[1], font, enter=False, locate=find)
-            time.sleep(1.5)
-            self.button("t.split(String.fromCharCode(10))[0].trim()===%s||t.startsWith(%s+',')" % (json.dumps(font), json.dumps(font)), wait=10)
-            time.sleep(1)
+            self.set_font(font)
         if size:
             self.set_font_size(size)
         self.assert_single()
@@ -197,10 +285,51 @@ class Editor:
             self.set_align(align)
         self.place(x, y, w, is_text=True)
 
+    def set_font(self, font):
+        """Pick a font for the selected text box from the font panel; one retry with the panel reopened."""
+        find = """(()=>{const i=[...document.querySelectorAll('input')].find(i=>i.getBoundingClientRect().x<420&&i.getBoundingClientRect().width>0&&/font|try|search/i.test((i.placeholder||'')+(i.getAttribute('aria-label')||'')));
+            if(!i)return null;const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()"""
+        pick = "t.split(String.fromCharCode(10))[0].trim()===%s||t.startsWith(%s+',')" % (json.dumps(font), json.dumps(font))
+        last = None
+        for attempt in range(2):
+            try:
+                if not self.t.ev(find):  # panel not open yet
+                    self.button("t.startsWith('Toggle font selector')")
+                    time.sleep(1.0)  # the font panel slides in
+                box = self.t.wait(find, 6)
+                if not box:
+                    raise RuntimeError("kolom cari font tidak ketemu")
+                self.fill_input(box[0], box[1], font, enter=False, locate=find)
+                time.sleep(1.5)
+                self.button(pick, wait=10)
+                time.sleep(1)
+                return
+            except RuntimeError as ex:
+                last = ex
+                self.assert_single()
+                self.button("t.startsWith('Toggle font selector')")  # closes the panel; next try reopens it
+                time.sleep(1.2)
+        raise RuntimeError(f"font {font!r}: {last}")
+
+    def type_lines(self, text):
+        """Type text; "\\n" becomes Enter (a new paragraph in the same text box), so line breaks are fixed
+        and do not depend on Canva's wrapping."""
+        for i, line in enumerate(text.split("\n")):
+            if i:  # Canva's text editor handles the Enter keydown itself (a char event would add a second break)
+                time.sleep(0.25)
+                self.t.send("Input.dispatchKeyEvent", {"type": "rawKeyDown", "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13})
+                self.t.send("Input.dispatchKeyEvent", {"type": "keyUp", "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13})
+                time.sleep(0.35)
+            if line:
+                self.type(line)
+
     def text_on_page(self, text) -> bool:
-        """Is `text` rendered in the design (Canva keeps text elements as DOM nodes)?"""
-        return bool(self.t.ev("""(()=>{const want=%s;const norm=s=>(s||'').replace(/[\ufeff\u200b-\u200d]/g,'').replace(/\u00a0/g,' ').trim();
-            return [...document.querySelectorAll('p,span,div')].some(e=>e.children.length<3&&norm(e.innerText)===want)})()""" % json.dumps(text.strip())))
+        """Is `text` rendered in the design (Canva keeps text elements as DOM nodes)? Multi-line text:
+        every line must be there."""
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        return bool(self.t.ev("""(()=>{const want=%s;const norm=s=>(s||'').replace(/[\\ufeff\\u200b-\\u200d]/g,'').replace(/\\u00a0/g,' ').trim();
+            const all=[...document.querySelectorAll('p,span,div')].filter(e=>e.children.length<3).map(e=>norm(e.innerText));
+            return want.every(w=>all.includes(w))})()""" % json.dumps(lines)))
 
     DEFAULT_TEXTS = ("Your paragraph text", "Add a heading", "Add a subheading", "Add a little bit of body text")
 
@@ -294,6 +423,27 @@ class Editor:
         time.sleep(0.8)
         self.key("Escape")
 
+    PAGE_COUNTER = """(()=>{const e=[...document.querySelectorAll('span,div,p,button')].find(e=>e.children.length<2&&/^\\d+ \\/ \\d+$/.test((e.innerText||'').trim()));
+        return e?e.innerText.trim().split(' / ').map(Number):null})()"""
+
+    def page_counter(self):
+        """[current page, page count] from the editor footer, e.g. [2, 2]."""
+        return self.t.ev(self.PAGE_COUNTER)
+
+    def add_page(self):
+        """Append an empty page with the "+ Add page" bar under the last page; the new page becomes active."""
+        self.key("Escape"); self.key("Escape")
+        before = self.page_counter() or [0, 0]
+        # the active page's header icon (aria-label "Add page") is on screen; the bar under the last page
+        # may be scrolled out of view
+        self.button("b.getAttribute('aria-label')==='Add page'&&!(b.innerText||'').trim()"
+                    "&&b.getBoundingClientRect().y>60&&b.getBoundingClientRect().bottom<innerHeight-60")
+        # Canva inserts the page after the active one and makes it active
+        if not self.t.wait("(()=>{const c=%s;return c&&c[1]===%d})()" % (self.PAGE_COUNTER.strip(), before[1] + 1), 15):
+            raise RuntimeError(f"halaman baru tidak muncul (sebelumnya {before}, sekarang {self.page_counter()})")
+        time.sleep(1.5)
+        return (self.page_counter() or [None])[0]
+
     def set_title(self, title):
         p = self.t.ev("""(()=>{const i=document.querySelector('input[aria-label="Design title"]');if(!i)return null;
             const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()""")
@@ -316,18 +466,47 @@ def create_design(width: int, height: int) -> str:
         boxes_js = """(()=>{const n=[...document.querySelectorAll('input[type=number]')].filter(i=>i.getBoundingClientRect().width>0);
             return n.length>=2?n.slice(0,2).map(i=>{const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]}):null})()"""
         boxes = None
+        tabs_before = {t["id"] for t in json.load(urllib.request.urlopen(BASE + "/json", timeout=5))}
         for _ in range(4):  # the home page may still be hydrating: retry until the size dialog shows
-            ed.button("/^Custom size/.test(t)", wait=40)
+            # Never click the "Quick Create" carousel: it shifts while loading and a click can land on
+            # "Email" or "Presentation" and open an unwanted design. Use the "Create a design" dialog's
+            # side menu, whose entries do not move.
+            # Canva's home changes often: find any visible element whose text is exactly "Custom size"
+            # (a menu row, a tile label...) and click it once it stops moving.
+            find = """(()=>{const c=[...document.querySelectorAll('button,a,[role=button],[role=menuitem],[role=option],div,span,p')]
+                .filter(e=>e.children.length<4&&(e.innerText||'').trim()==='Custom size').map(e=>e.getBoundingClientRect())
+                .filter(r=>r.width>30&&r.height>10&&r.y>0&&r.y<innerHeight);
+                const r=c[c.length-1];return r?[r.x+r.width/2,r.y+r.height/2]:null})()"""
+            end, last, pos = time.time() + 40, None, None
+            while time.time() < end:
+                p = home.ev(find)
+                if p and last and abs(p[0] - last[0]) < 1 and abs(p[1] - last[1]) < 1:
+                    pos = p
+                    break
+                last = p
+                time.sleep(0.8)
+            if pos:
+                ed.click(pos[0], pos[1])
             boxes = home.wait(boxes_js, 8)
+            if not boxes and pos is None:
+                ed.stable_button("t==='Create a design'", wait=20)  # older layout: open the dialog first
+                time.sleep(2)
+                continue
             if boxes:
                 break
             ed.key("Escape"); time.sleep(3)
+            for t in json.load(urllib.request.urlopen(BASE + "/json", timeout=5)):  # stray design tab? close it
+                if t["id"] not in tabs_before and t.get("type") == "page":
+                    urllib.request.urlopen(f"{BASE}/json/close/{t['id']}", timeout=5)
         if not boxes:
             raise RuntimeError("dialog Custom size tidak muncul")
         for (bx, by), v in zip(boxes, (width, height)):
             ed.fill_input(bx, by, v, clicks=3, enter=False)
         time.sleep(1)
         before = {t["id"] for t in json.load(urllib.request.urlopen(BASE + "/json", timeout=5))}
+        # the button stays disabled until Canva has taken both numbers; clicking earlier does nothing
+        home.wait("(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.innerText||'').trim()==='Create new design');"
+                  "return b&&!b.disabled&&b.getAttribute('aria-disabled')!=='true'})()", 10)
         ed.button("t==='Create new design'")
         end = time.time() + 90
         while time.time() < end:
@@ -360,6 +539,82 @@ def _open_editor(url: str, tries: int = 4) -> _Tab:
     raise RuntimeError(f"editor Canva tidak merespons ({url}): {last}")
 
 
+def shortcut_selftest(design_url: str | None = None) -> dict:
+    """Check the keyboard shortcuts against the live editor by counting copies of a marker text box."""
+    st = ensure_chrome()
+    if not st.get("running"):
+        return {"ok": False, **st}
+    url = design_url or create_design(800, 600)
+    if not design_url:
+        time.sleep(12)
+    tab = _open_editor(url)
+    ed = Editor(tab)
+    mark = "KEYTEST-%d" % (int(time.time()) % 100000)
+    count_js = """[...document.querySelectorAll('p')].filter(p=>p.innerText.trim()===%s&&p.getBoundingClientRect().width>0
+        &&getComputedStyle(p).fontFamily.indexOf('Times')<0).length""" % json.dumps(mark)
+    multi_js = "[...document.querySelectorAll('button')].some(b=>(b.innerText||'').trim()==='Group'&&b.getBoundingClientRect().width>0)"
+    steps = []
+
+    def n():
+        time.sleep(1.5)
+        return tab.ev(count_js)
+
+    def check(name, combo, expect, got, extra=None):
+        steps.append({"step": name, "keys": combo, "expect": expect, "got": got, "ok": expect == got, **(extra or {})})
+
+    try:
+        ed.add_text(mark, size=40, x=60, y=60)
+        base = n()
+        check("tambah teks", "-", 1, base)
+        ed.copy(); ed.paste()
+        check("salin + tempel", "ctrl+c, ctrl+v", 2, n())
+        ed.undo()
+        check("undo", "ctrl+z", 1, n())
+        ed.redo()
+        check("redo", "ctrl+y", 2, n())
+        ed.undo(); n(); ed.hotkey("ctrl+shift+z")
+        check("redo (alternatif)", "ctrl+shift+z", 2, n())
+        ed.focus_workspace(); ed.select_all(); time.sleep(1)
+        check("pilih semua", "ctrl+a", True, bool(tab.ev(multi_js)))
+        ed.cut()
+        check("potong", "ctrl+x", 0, n())
+        ed.paste()
+        check("tempel hasil potong", "ctrl+v", 2, n())
+        ed.focus_workspace(); ed.select_all(); time.sleep(0.8)
+        ed.hotkey("shift+ctrl+x")  # Canva has no cut on Shift+Ctrl+X: the elements must stay
+        check("shift+ctrl+x (Canva tidak memotong, elemen tetap)", "shift+ctrl+x", 2, n())
+        ed.focus_workspace(); ed.select_all(); time.sleep(0.8)
+        ed.duplicate()
+        check("duplikat", "ctrl+d", 4, n())
+        ed.focus_workspace(); ed.select_all(); time.sleep(0.8)
+        ed.hotkey("Delete")
+        check("hapus", "Delete", 0, n())
+        ed.undo()
+        check("undo hapus", "ctrl+z", 4, n())
+        # every combo must reach the page as the right keydown (modifiers included); typed into a scratch
+        # textarea so nothing in the design is touched
+        combos = ["ctrl+z", "ctrl+y", "ctrl+shift+z", "ctrl+c", "ctrl+v", "ctrl+x", "ctrl+a", "shift+ctrl+x",
+                  "ctrl+d", "ctrl+g", "ctrl+shift+g", "ctrl+b", "ctrl+i", "ctrl+u", "ctrl+s", "ctrl+=", "ctrl+-",
+                  "alt+shift+t", "shift+ArrowUp", "Delete", "Backspace", "Escape", "Enter", "F2", "Tab"]
+        ed.key("Escape"); ed.key("Escape")
+        tab.ev("""(()=>{window.__keylog=[];const ta=document.createElement('textarea');ta.id='__keytest';
+            ta.style.cssText='position:fixed;left:0;top:0;width:20px;height:20px;opacity:0.01;z-index:99999';document.body.appendChild(ta);
+            ta.addEventListener('keydown',e=>{if(!/^(Control|Shift|Alt|Meta)$/.test(e.key))window.__keylog.push([e.key,e.code,e.ctrlKey,e.shiftKey,e.altKey]);e.preventDefault();e.stopPropagation()},true);
+            ta.focus();return document.activeElement===ta})()""")
+        for c in combos:
+            ed.hotkey(c)
+        log = tab.ev("window.__keylog") or []
+        tab.ev("document.getElementById('__keytest')?.remove()")
+        for c, got in zip(combos, log + [None] * (len(combos) - len(log))):
+            mods = {m.lower() for m in c.split("+")[:-1]}
+            want = [("ctrl" in mods), ("shift" in mods), ("alt" in mods)]
+            check(f"keydown {c}", c, True, bool(got) and got[2:5] == want, {"event": got})
+        shot =tab.screenshot(Path.home() / ".creative-mcp" / "canva_shortcut_selftest.png")
+        return {"ok": all(s["ok"] for s in steps), "design_url": tab.ev("location.href"), "steps": steps, "screenshot": shot}
+    finally:
+        tab.ws.close()
+
+
 def build(spec: dict) -> dict:
     """Create (or open) a design and add the spec's elements as native Canva elements."""
     st = ensure_chrome()
@@ -373,32 +628,57 @@ def build(spec: dict) -> dict:
         time.sleep(12)  # a brand-new design is still being saved; reopening it at once tends to hang
     tab = _open_editor(url)
     ed = Editor(tab)
-    done, errors = [], []
+    # "pages": [{"elements": [...]}, ...] builds a multi-page design (slides). A plain "elements" list is one page.
+    # A new design fills its blank first page; with design_url the pages are appended after the existing ones
+    # (set "fill_current_page": true to put the first spec page on the page that is open).
+    pages = spec.get("pages") or [{"elements": spec.get("elements", [])}]
+    fill_first = not spec.get("design_url") or spec.get("fill_current_page", False)
+    log = Path.home() / ".creative-mcp" / "canva_native_progress.jsonl"
+    log.parent.mkdir(parents=True, exist_ok=True)
+
+    def note(**kw):
+        with log.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.strftime("%H:%M:%S"), **kw}, ensure_ascii=False) + "\n")
+
+    done, errors, removed, page_numbers = [], [], 0, []
     try:
         if spec.get("title"):
             ed.set_title(spec["title"])
-        for i, e in enumerate(spec.get("elements", [])):
-            try:
-                if e["type"] == "image":
-                    ed.add_image(e["path"], e.get("x", 0), e.get("y", 0), e.get("w"), e.get("h"))
-                elif e["type"] == "text":
-                    ed.add_text(e["text"], e.get("font"), e.get("size"), e.get("color"), e.get("x", 0), e.get("y", 0), e.get("w"), e.get("bold", False), e.get("align", "left"))
-                done.append(i)
-            except Exception as ex:  # keep going: one failed element should not lose the rest
-                errors.append({"element": i, "error": str(ex)})
-        ed.key("Escape"); ed.key("Escape")
-        removed = 0
-        try:  # never report success while a placeholder box sits on the page
-            removed = ed.remove_default_texts()
-        except Exception as ex:
-            errors.append({"element": None, "error": f"pembersihan teks bawaan: {ex}"})
-        missing = [i for i in done if spec["elements"][i]["type"] == "text" and not ed.text_on_page(spec["elements"][i]["text"])]
-        for i in missing:
-            done.remove(i)
-            errors.append({"element": i, "error": "teks tidak ada di desain setelah build"})
+        for pi, page in enumerate(pages):
+            if pi or not fill_first:
+                ed.add_page()
+            page_numbers.append((ed.page_counter() or [None])[0])
+            note(page=pi, canva_page=page_numbers[-1], start=True)
+            els = page.get("elements", [])
+            ok_here = []
+            for i, e in enumerate(els):
+                try:
+                    if e["type"] == "image":
+                        ed.add_image(e["path"], e.get("x", 0), e.get("y", 0), e.get("w"), e.get("h"))
+                    elif e["type"] == "text":
+                        ed.add_text(e["text"], e.get("font"), e.get("size"), e.get("color"), e.get("x", 0), e.get("y", 0), e.get("w"), e.get("bold", False), e.get("align", "left"))
+                    ok_here.append(i)
+                    note(page=pi, element=i, ok=True)
+                except Exception as ex:  # keep going: one failed element should not lose the rest
+                    errors.append({"page": pi, "element": i, "error": str(ex)})
+                    note(page=pi, element=i, ok=False, error=str(ex))
+            ed.key("Escape"); ed.key("Escape")
+            try:  # never report success while a placeholder box sits on the page
+                removed += ed.remove_default_texts()
+            except Exception as ex:
+                errors.append({"page": pi, "element": None, "error": f"pembersihan teks bawaan: {ex}"})
+            # check this page now: Canva drops off-screen pages from the DOM
+            for i in list(ok_here):
+                if els[i]["type"] == "text" and not ed.text_on_page(els[i]["text"]):
+                    ok_here.remove(i)
+                    errors.append({"page": pi, "element": i, "error": "teks tidak ada di desain setelah build"})
+            done.extend((pi, i) for i in ok_here)
+            if spec.get("page_shots"):
+                tab.screenshot(Path(spec["page_shots"]) / f"page{pi + 1:02d}.png")
         time.sleep(3)
         shot = tab.screenshot(Path.home() / ".creative-mcp" / "canva_native_last.png")
-        return {"ok": not errors, "design_url": tab.ev("location.href"), "added": done, "errors": errors,
-                "default_text_removed": removed, "screenshot": shot}
+        added = [i for _, i in done] if len(pages) == 1 else [list(d) for d in done]
+        return {"ok": not errors, "design_url": tab.ev("location.href"), "pages": len(pages), "canva_pages": page_numbers,
+                "added": added, "errors": errors, "default_text_removed": removed, "screenshot": shot}
     finally:
         tab.ws.close()  # leave the editor tab open for the user
