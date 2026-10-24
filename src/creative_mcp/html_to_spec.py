@@ -68,18 +68,24 @@ class _Headless:
         self.p = subprocess.Popen([_chrome(), "--headless=new", f"--remote-debugging-port={port}", f"--user-data-dir={self.tmp}",
                                    "--hide-scrollbars", f"--window-size={w},{h}", "about:blank"],
                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(60):
-            try:
-                tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json", timeout=2))
-                page = next(t for t in tabs if t["type"] == "page")
-                break
-            except Exception:
-                time.sleep(0.5)
-        else:
-            raise RuntimeError("headless Chrome tidak jalan")
-        self.ws = websocket.create_connection(page["webSocketDebuggerUrl"], suppress_origin=True, timeout=120)
-        self.n = 0
-        self.send("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": False})
+        self.ws = None
+        try:
+            for _ in range(60):
+                try:
+                    tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json", timeout=2))
+                    page = next(t for t in tabs if t["type"] == "page")
+                    break
+                except Exception:
+                    time.sleep(0.5)
+            else:
+                raise RuntimeError("headless Chrome tidak jalan")
+            self.ws = websocket.create_connection(page["webSocketDebuggerUrl"], suppress_origin=True, timeout=30)
+            self.n = 0
+            self.send("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": False})
+            self.ws.settimeout(120)
+        except Exception:
+            self.close()
+            raise
 
     def send(self, m, p=None):
         self.n += 1
@@ -96,14 +102,27 @@ class _Headless:
 
     def close(self):
         try:
-            self.ws.close()
+            if self.ws:
+                self.ws.close()
         finally:
+            # kill the whole tree: a lone kill() of the browser process can leave renderers holding the profile
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(self.p.pid)], capture_output=True)
             self.p.kill()
             try:
                 self.p.wait(15)
             except subprocess.TimeoutExpired:
                 pass
             shutil.rmtree(self.tmp, ignore_errors=True)
+
+
+def _start_headless(w: int, h: int, tries: int = 3) -> _Headless:
+    """A headless Chrome sometimes never answers its first command under load; start a fresh one."""
+    for i in range(tries):
+        try:
+            return _Headless(w, h)
+        except Exception:
+            if i == tries - 1:
+                raise
 
 
 def _free_port() -> int:
@@ -123,7 +142,7 @@ def convert(html_path: str, out_dir: str | None = None, width: int = 3000, heigh
     html = Path(html_path).resolve()
     out = Path(out_dir).resolve() if out_dir else html.parent / (html.stem + "-canva")
     out.mkdir(parents=True, exist_ok=True)
-    hb = _Headless(width, height)
+    hb = _start_headless(width, height)
     try:
         hb.send("Page.enable")
         hb.send("Page.navigate", {"url": html.as_uri()})
@@ -146,7 +165,8 @@ def convert(html_path: str, out_dir: str | None = None, width: int = 3000, heigh
                         if it["type"] == "text" and it["px"] * PX_TO_CANVA < min_font_pt - 0.05})
         if small:
             raise ValueError(f"{html.name}: teks di bawah {min_font_pt} pt (Canva): {small[:8]}")
-    elements = [{"type": "image", "path": str(bg), "x": 0, "y": 0, "w": round(width * k)}]
+    # explicit h: Canva sometimes drops the background with a cropped frame (1920x772), keep_ratio would keep that crop
+    elements = [{"type": "image", "path": str(bg), "x": 0, "y": 0, "w": round(width * k), "h": round(height * k)}]
     for it in data["items"]:
         if it["type"] == "image":
             src = (html.parent / it["src"]).resolve()

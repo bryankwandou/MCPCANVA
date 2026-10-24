@@ -187,10 +187,11 @@ class Editor:
         return pos
 
     def field(self, label: str, value) -> bool:
-        pos = self.t.ev(_FIELD % json.dumps(label))
+        loc = _FIELD % json.dumps(label)
+        pos = self.t.ev(loc)
         if not pos:
             return False
-        self.fill_input(pos[0], pos[1], value, clicks=3)
+        self.fill_input(pos[0], pos[1], value, clicks=3, locate=loc)  # panel may still be sliding in
         time.sleep(0.5)
         return True
 
@@ -236,10 +237,13 @@ class Editor:
         for typ in ("dragEnter", "dragOver", "drop"):
             self.t.send("Input.dispatchDragEvent", {"type": typ, "x": cx, "y": cy, "data": data})
             time.sleep(0.4)
-        end = time.time() + 60  # wait until the new image is inserted and selected
+        end = time.time() + 120  # wait until the new image is inserted and selected
         while time.time() < end:
             time.sleep(2)
-            self.position_panel()
+            try:
+                self.position_panel()
+            except RuntimeError:
+                continue  # upload still running, nothing selected yet
             now = self.selected_size()
             if now and now != before:
                 break
@@ -279,8 +283,8 @@ class Editor:
         if color:
             self.set_text_color(color)
             self.assert_single()
-        if bold:
-            self.set_bold(True)
+        # always set it: a new text box can start bold (Canva carries the last style over)
+        self.set_bold(bool(bold))
         if align:
             self.set_align(align)
         self.place(x, y, w, is_text=True)
@@ -423,7 +427,10 @@ class Editor:
         time.sleep(0.8)
         self.key("Escape")
 
-    PAGE_COUNTER = """(()=>{const e=[...document.querySelectorAll('span,div,p,button')].find(e=>e.children.length<2&&/^\\d+ \\/ \\d+$/.test((e.innerText||'').trim()));
+    # only the editor footer: a slide can itself contain text like "1 / 11"
+    PAGE_COUNTER = """(()=>{const e=[...document.querySelectorAll('span,div,p,button')].filter(e=>e.children.length<2&&/^\\d+ \\/ \\d+$/.test((e.innerText||'').trim())
+        &&!e.closest('[contenteditable],p')&&e.getBoundingClientRect().y>innerHeight-90&&e.getBoundingClientRect().width>0
+        &&e.getBoundingClientRect().x>innerWidth-260&&!/^0/.test(e.innerText.trim())).pop();  // not a "07 / 16" printed on a slide
         return e?e.innerText.trim().split(' / ').map(Number):null})()"""
 
     def page_counter(self):
@@ -443,6 +450,33 @@ class Editor:
             raise RuntimeError(f"halaman baru tidak muncul (sebelumnya {before}, sekarang {self.page_counter()})")
         time.sleep(1.5)
         return (self.page_counter() or [None])[0]
+
+    def go_to_page(self, n=None):
+        """Make page n (default: the last page) the active page: scroll the page list and click its "Page n" header."""
+        self.key("Escape"); self.key("Escape")
+        total = (self.page_counter() or [1, 1])[1]
+        n = total if n is None else n
+        if n == total:  # last page: jump straight to the bottom of the page list
+            self.t.ev("""(()=>{const s=[...document.querySelectorAll('div')].find(d=>d.scrollHeight>d.clientHeight+200&&/auto|scroll/.test(getComputedStyle(d).overflowY)&&d.clientWidth>600);
+                if(s)s.scrollTop=s.scrollHeight})()""")
+            time.sleep(1.5)
+        for _ in range(30):
+            if (self.page_counter() or [None])[0] == n:
+                return n
+            p = self.t.ev("""(()=>{const h=[...document.querySelectorAll('span,p,div')].find(e=>e.children.length===0&&
+                new RegExp('^Page %d( -|$)').test((e.innerText||'').trim()));
+              const s=[...document.querySelectorAll('div')].find(d=>d.scrollHeight>d.clientHeight+200&&/auto|scroll/.test(getComputedStyle(d).overflowY)&&d.clientWidth>600);
+              if(h){const r=h.getBoundingClientRect();if(r.y>70&&r.bottom<innerHeight-70)return [r.x+r.width/2,r.y+r.height/2];
+                if(s)s.scrollTop+=r.y-innerHeight/3;return null}
+              if(s){const hs=[...document.querySelectorAll('span,p,div')].filter(e=>e.children.length===0&&/^Page \\d+( -|$)/.test((e.innerText||'').trim()));
+                const first=hs.length?+hs[0].innerText.match(/\\d+/)[0]:1;s.scrollTop+=(%d>first?1:-1)*s.clientHeight*0.8}
+              return null})()""" % (n, n))
+            if p:
+                self.click(p[0], p[1])
+            time.sleep(1.2)
+        if (self.page_counter() or [None])[0] != n:
+            raise RuntimeError(f"tidak bisa pindah ke halaman {n} (sekarang {self.page_counter()})")
+        return n
 
     def set_title(self, title):
         p = self.t.ev("""(()=>{const i=document.querySelector('input[aria-label="Design title"]');if(!i)return null;
@@ -616,6 +650,7 @@ def shortcut_selftest(design_url: str | None = None) -> dict:
 
 
 def build(spec: dict) -> dict:
+    import websocket
     """Create (or open) a design and add the spec's elements as native Canva elements."""
     st = ensure_chrome()
     if not st.get("running"):
@@ -644,24 +679,48 @@ def build(spec: dict) -> dict:
     try:
         if spec.get("title"):
             ed.set_title(spec["title"])
+        if spec.get("design_url"):
+            # the editor opens on whatever page was viewed last; resume work always happens at the end
+            ed.go_to_page()
+        if fill_first and spec.get("clear_current_page"):
+            ed.focus_workspace(); ed.select_all(); time.sleep(1); ed.hotkey("Delete"); time.sleep(1.5)
+        reopen_every = int(spec.get("reopen_every", 4))
         for pi, page in enumerate(pages):
+            if pi and reopen_every and pi % reopen_every == 0:
+                # a Canva tab slows down and eventually stops answering after many large uploads: start fresh
+                tab.close(); time.sleep(3)
+                tab = _open_editor(url); ed = Editor(tab); ed.go_to_page()
             if pi or not fill_first:
                 ed.add_page()
+            tab.wake()
             page_numbers.append((ed.page_counter() or [None])[0])
             note(page=pi, canva_page=page_numbers[-1], start=True)
             els = page.get("elements", [])
             ok_here = []
             for i, e in enumerate(els):
-                try:
-                    if e["type"] == "image":
-                        ed.add_image(e["path"], e.get("x", 0), e.get("y", 0), e.get("w"), e.get("h"))
-                    elif e["type"] == "text":
-                        ed.add_text(e["text"], e.get("font"), e.get("size"), e.get("color"), e.get("x", 0), e.get("y", 0), e.get("w"), e.get("bold", False), e.get("align", "left"))
-                    ok_here.append(i)
-                    note(page=pi, element=i, ok=True)
-                except Exception as ex:  # keep going: one failed element should not lose the rest
-                    errors.append({"page": pi, "element": i, "error": str(ex)})
-                    note(page=pi, element=i, ok=False, error=str(ex))
+                for attempt in range(2):
+                    try:
+                        if e["type"] == "image":
+                            ed.add_image(e["path"], e.get("x", 0), e.get("y", 0), e.get("w"), e.get("h"))
+                        elif e["type"] == "text":
+                            ed.add_text(e["text"], e.get("font"), e.get("size"), e.get("color"), e.get("x", 0), e.get("y", 0), e.get("w"), e.get("bold", False), e.get("align", "left"))
+                        ok_here.append(i)
+                        note(page=pi, element=i, ok=True)
+                        break
+                    except (websocket.WebSocketTimeoutException, TimeoutError, ConnectionError) as ex:
+                        # the tab froze (e.g. another tab came to the front): reconnect, wake it, retry once
+                        note(page=pi, element=i, ok=False, error=f"tab beku, sambung ulang: {ex}")
+                        try:
+                            tab.reconnect(); time.sleep(3)
+                        except Exception:  # dead for good: reopen the editor on the page being built (the last one)
+                            tab.close(); time.sleep(5)
+                            tab = _open_editor(url); ed = Editor(tab); ed.go_to_page()
+                        if attempt:
+                            errors.append({"page": pi, "element": i, "error": str(ex)})
+                    except Exception as ex:  # keep going: one failed element should not lose the rest
+                        errors.append({"page": pi, "element": i, "error": str(ex)})
+                        note(page=pi, element=i, ok=False, error=str(ex))
+                        break
             ed.key("Escape"); ed.key("Escape")
             try:  # never report success while a placeholder box sits on the page
                 removed += ed.remove_default_texts()

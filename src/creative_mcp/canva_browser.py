@@ -88,6 +88,17 @@ class _Tab:
     def ev(self, js: str):
         return self.send("Runtime.evaluate", {"expression": js, "returnByValue": True})["result"]["result"].get("value")
 
+    def reconnect(self):
+        """New DevTools connection to the same tab and wake it again (a frozen background tab times out)."""
+        import websocket
+        try:
+            self.ws.close()
+        except Exception:
+            pass
+        self.ws = websocket.create_connection(self.info["webSocketDebuggerUrl"], suppress_origin=True, timeout=30)
+        self.n = 0
+        self.wake()
+
     def screenshot(self, path: Path) -> str:
         path.write_bytes(base64.b64decode(self.send("Page.captureScreenshot", {"format": "png"})["result"]["data"]))
         return str(path)
