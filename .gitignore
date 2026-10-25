@@ -4,3 +4,8 @@ __pycache__/
 *.egg-info/
 .venv/
 .vercel/
+.vercel
+.env*
+
+CHAT_INI_LENGKAP.html
+

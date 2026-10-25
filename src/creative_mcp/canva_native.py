@@ -402,12 +402,17 @@ class Editor:
         # Canva collapses runs of spaces; every text also has a hidden copy (inside a 1x1 clip), so only a
         # match that is really under the mouse at its centre counts
         first = " ".join(first.split())
-        find = """(()=>{const want=%s;const norm=s=>(s||'').replace(/[\\ufeff\\u200b-\\u200d]/g,'').replace(/\\u00a0/g,' ').split('\\n')[0].replace(/\\s+/g,' ').trim();
+        # only inside the active page (between its "Page n" header and the next one): the same words, e.g. the
+        # footer, are on every page and a match on a neighbour page would copy/edit the wrong page
+        cur = (self.page_counter() or [0])[0]
+        find = """(()=>{const want=%s,cur=%d;const norm=s=>(s||'').replace(/[\\ufeff\\u200b-\\u200d]/g,'').replace(/\\u00a0/g,' ').split('\\n')[0].replace(/\\s+/g,' ').trim();
+            const hy=n=>{const h=[...document.querySelectorAll('span,p,div')].find(e=>e.children.length===0&&new RegExp('^Page '+n+'(\\\\s|$)').test((e.innerText||'').trim()));return h?h.getBoundingClientRect().bottom:null};
+            const top=hy(cur),nx=hy(cur+1),bot=nx===null?innerHeight:nx-30;if(top===null)return null;
             for(const e of document.querySelectorAll('p,span,div')){if(e.children.length>=3||norm(e.innerText)!==want)continue;
-              const r=e.getBoundingClientRect();if(r.width<4||r.y<60||r.bottom>innerHeight-60)continue;
+              const r=e.getBoundingClientRect();if(r.width<4||r.y<60||r.bottom>innerHeight-60||r.y<top||r.bottom>bot)continue;
               const x=r.x+r.width/2,y=r.y+r.height/2,h=document.elementFromPoint(x,y);
               if(h&&(e.contains(h)||h.contains(e)))return [x,y]}
-            return null})()""" % json.dumps(first)
+            return null})()""" % (json.dumps(first), cur)
         self.focus_workspace()
         p = self.t.ev(find)
         if not p:  # maybe scrolled off: bring the active page fully into view and look again
@@ -581,15 +586,19 @@ class Editor:
             self.t.ev("""(()=>{const s=[...document.querySelectorAll('div')].find(d=>d.scrollHeight>d.clientHeight+200&&/auto|scroll/.test(getComputedStyle(d).overflowY)&&d.clientWidth>600);
                 if(s)s.scrollTop=s.scrollHeight})()""")
             _nap(1.5)
-        for _ in range(30):
+        for step in range(45):
             if (self.page_counter() or [None])[0] == n:
                 return n
+            if step == 30:  # stuck (seen near pages 30-31): restart the search from the bottom of the list
+                self.t.ev("""(()=>{const s=[...document.querySelectorAll('div')].find(d=>d.scrollHeight>d.clientHeight+200&&/auto|scroll/.test(getComputedStyle(d).overflowY)&&d.clientWidth>600);
+                    if(s)s.scrollTop=s.scrollHeight})()""")
+                _nap(1.5)
             p = self.t.ev("""(()=>{const h=[...document.querySelectorAll('span,p,div')].find(e=>e.children.length===0&&
-                new RegExp('^Page %d( -|$)').test((e.innerText||'').trim()));
+                new RegExp('^Page %d(\\\\s|$)').test((e.innerText||'').trim()));
               const s=[...document.querySelectorAll('div')].find(d=>d.scrollHeight>d.clientHeight+200&&/auto|scroll/.test(getComputedStyle(d).overflowY)&&d.clientWidth>600);
               if(h){const r=h.getBoundingClientRect();if(r.y>70&&r.bottom<innerHeight-70)return [r.x+r.width/2,r.y+r.height/2];
                 if(s)s.scrollTop+=r.y-innerHeight/3;return null}
-              if(s){const hs=[...document.querySelectorAll('span,p,div')].filter(e=>e.children.length===0&&/^Page \\d+( -|$)/.test((e.innerText||'').trim()));
+              if(s){const hs=[...document.querySelectorAll('span,p,div')].filter(e=>e.children.length===0&&/^Page \\d+(\\s|$)/.test((e.innerText||'').trim()));
                 const first=hs.length?+hs[0].innerText.match(/\\d+/)[0]:1;s.scrollTop+=(%d>first?1:-1)*s.clientHeight*0.8}
               return null})()""" % (n, n))
             if p:

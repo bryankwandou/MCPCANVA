@@ -39,12 +39,12 @@ td.note { color: var(--muted); max-width: 46ch; }
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><button class="btn" id="back"></button><h1>Fitur Canva: Free, Pro, dan di Rakit</h1></div>
+  <div class="top"><button class="btn" id="back"></button><h1>Fitur Canva & CapCut: Free, Pro, dan di Rakit</h1></div>
   <p class="lede" id="disc"></p>
   <div class="stats" id="stats"></div>
   <div class="legend" id="legend"></div>
   <div class="filters">
-    <div class="grp" id="fApp" hidden><button data-v="" class="on">Semua</button></div>
+    <div class="grp" id="fApp"><button data-v="" class="on">Semua</button><button data-v="canva">Canva</button><button data-v="capcut">CapCut</button></div>
     <div class="grp" id="fTier"><button data-v="" class="on">Semua paket</button><button data-v="free">Gratis</button><button data-v="terbatas">Terbatas</button><button data-v="pro">Pro</button></div>
     <div class="grp" id="fSt"><button data-v="" class="on">Semua status</button><button data-v="ada">Ada</button><button data-v="sebagian">Sebagian</button><button data-v="akun">Lewat akun</button><button data-v="tidak">Tidak</button></div>
     <input type="search" id="q" placeholder="Cari fitur" style="min-width:180px">
@@ -55,7 +55,7 @@ td.note { color: var(--muted); max-width: 46ch; }
 <script src="studio.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-$('#back').innerHTML = `${icon('back')} Beranda`; $('#back').onclick = () => Studio.go('studio.html');
+$('#back').innerHTML = `${icon('back')} Beranda`; $('#back').onclick = () => Studio.go('index.html');
 const TIER = {free: ['free', 'Gratis'], terbatas: ['terbatas', 'Gratis terbatas'], pro: ['pro', 'Pro']}, ST = {ada: 'Ada', sebagian: 'Sebagian', akun: 'Lewat akun Anda', tidak: 'Tidak ada'};
 const COL = {ada: 'var(--ok)', sebagian: 'var(--accent)', akun: 'var(--select)', tidak: '#f08b8b'};
 let F = null; const f = {app: '', tier: '', st: '', q: ''};
@@ -72,7 +72,7 @@ function draw() {
 }
 fetch('features.json').then(r => r.json()).then(j => {
   F = j; $('#disc').textContent = `${j.disclaimer} Terakhir diperbarui ${j.updated}.`;
-  $('#stats').innerHTML = [...new Set(j.features.map(x => x.app))].map(app => {
+  $('#stats').innerHTML = ['canva', 'capcut'].map(app => {
     const xs = j.features.filter(x => x.app === app), n = s => xs.filter(x => x.studio === s).length;
     return `<div class="stat"><b>${app === 'canva' ? 'Canva' : 'CapCut'} · ${xs.length} fitur</b><div class="bar">${Object.keys(ST).map(s => `<i style="width:${n(s) / xs.length * 100}%;background:${COL[s]}"></i>`).join('')}</div>
       <span style="color:var(--muted);font-size:12px">${Object.keys(ST).map(s => `${n(s)} ${ST[s].toLowerCase()}`).join(' · ')}</span>

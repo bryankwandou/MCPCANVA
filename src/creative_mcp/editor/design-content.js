@@ -199,65 +199,6 @@ const THEMES = {
 
 // ---------- layouts: (W, H, t) => pages[]  (all adapt to any canvas size) ----------
 const LAYOUTS = {
-  showcase(W, H, t) { // high-end luxury editorial showcase with real photo and architectural grid
-    const p = t.pal, S = Math.min(W, H), m = S * .075, tw = W - 2 * m;
-    const fs = fitFs(t.title, tw, S * .09, 2, .65);
-    const photoH = H * .34, photoY = H * .19;
-    const cardY = photoY + photoH + S * .04, cardH = S * .12, cardSpacing = S * .02, cardW = (tw - 2 * cardSpacing) / 3;
-    const barY = cardY + cardH + S * .03, locY = barY + S * .055, ctaY = locY + S * .065, ctaH = S * .072;
-    const cardBg = p.soft || '#1E1814';
-    const borderCol = '#3A2E26';
-
-    const els = [
-      // Clean hairline top rule & subtle architectural framing
-      Sh('line', m, m * .7, tw, 2, borderCol, {opacity: .5, anim: {type: 'fade', dur: 0.5, delay: 0.05}}),
-      Tx((t.kicker || 'SPECIALTY ROASTERY & ESPRESSO BAR').toUpperCase(), m, m * .7 + S * .015, tw * .6, S * .024, p.primary, {bold: true, spacing: 4, font: t.bf, anim: {type: 'fade', dur: 0.6, delay: 0.1}}),
-      Tx('EST. 2026 // EDITION 01', W - m - S * .35, m * .7 + S * .015, S * .35, S * .02, '#9E8E80', {align: 'right', spacing: 2, font: t.bf, anim: {type: 'fade', dur: 0.6, delay: 0.1}}),
-
-      // Headline and subheadline
-      Tx(t.title || 'ARTISAN COFFEE MASTERPIECE', m, S * .095, tw, fs, p.text || '#FFFFFF', {bold: true, font: t.hf, lh: 1.05, anim: {type: 'fade', dur: 0.8, delay: 0.15}}),
-      Tx(t.sub || 'Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut', m, S * .095 + tH(t.title, tw, fs, 1.05, .65) + S * .012, tw, S * .03, '#C8BDB0', {font: t.bf, lh: 1.4, anim: {type: 'slide', dur: 0.6, delay: 0.25}}),
-
-      // Clean photo frame with refined hairline border & pop animation
-      R(m, photoY, tw, photoH, null, {stroke: borderCol, strokeW: 1, radius: 4}),
-      {id: uid(), type: 'image', x: Math.round(m), y: Math.round(photoY), w: Math.round(tw), h: Math.round(photoH),
-       src: 'assets/artisan_coffee.jpg', ar: 4/3, rot: 0, opacity: 1, radius: 4, crop: {zoom: 1, ox: 0, oy: 0}, name: 'Foto Barista Specialty',
-       anim: {type: 'pop', dur: 0.8, delay: 0.3}},
-
-      // 3 Refined Feature Columns with Icons, Shadows & Staggered Slide Animations
-      ...[
-        {num: '01', t: '100% Arabica', d: 'Single Origin Aceh Gayo & Toraja Kalosi terkurasi.', icon: 'shield'},
-        {num: '02', t: 'Fresh Roasted', d: 'Sangrai harian berkalibrasi kurva suhu presisi.', icon: 'star4'},
-        {num: '03', t: 'Master Barista', d: 'Ekstraksi rasio ideal 1:2 bertekanan stabil 9 bar.', icon: 'diamond'}
-      ].flatMap((feat, i) => {
-        const cx = m + i * (cardW + cardSpacing);
-        return [
-          R(cx, cardY, cardW, cardH, cardBg, {radius: 4, stroke: borderCol, strokeW: 1, shadow: {on: true, x: 0, y: 6, blur: 16, color: '#00000040'}, anim: {type: 'slide', dur: 0.6, delay: 0.4 + i * 0.1}}),
-          Sh(feat.icon, cx + cardW - S * .045, cardY + S * .014, S * .032, S * .032, p.primary, {opacity: 0.85, anim: {type: 'pop', dur: 0.5, delay: 0.5 + i * 0.1}}),
-          Tx(feat.num, cx + S * .02, cardY + S * .018, S * .05, S * .028, p.primary, {bold: true, font: t.hf, anim: {type: 'fade', dur: 0.5, delay: 0.45 + i * 0.1}}),
-          Tx(feat.t, cx + S * .075, cardY + S * .018, cardW - S * .13, S * .028, p.text || '#FFFFFF', {bold: true, font: t.hf, anim: {type: 'fade', dur: 0.5, delay: 0.45 + i * 0.1}}),
-          Sh('line', cx + S * .02, cardY + S * .052, cardW - S * .04, 1, borderCol, {opacity: .4}),
-          Tx(feat.d, cx + S * .02, cardY + S * .062, cardW - S * .04, S * .024, '#B0A396', {font: t.bf, lh: 1.35, anim: {type: 'fade', dur: 0.5, delay: 0.5 + i * 0.1}})
-        ];
-      }),
-
-      // Rating bar with shadow and fade
-      R(m, barY, tw, S * .044, cardBg, {radius: 4, stroke: borderCol, strokeW: 1, shadow: {on: true, x: 0, y: 4, blur: 12, color: '#00000030'}, anim: {type: 'fade', dur: 0.5, delay: 0.7}}),
-      Tx('SKOR MUTU 94.6 SCA  ·  2.500+ ULASAN KEPUASAN PELANGGAN  ·  SERAHAN TANGAN TERTINGGI', m + S * .02, barY + S * .012, tw - S * .04, S * .022, p.primary, {bold: true, align: 'center', spacing: 2, font: t.bf, anim: {type: 'fade', dur: 0.5, delay: 0.72}}),
-
-      // Location & Hours
-      R(m, locY, tw, S * .048, '#16110D', {radius: 4, stroke: borderCol, strokeW: 1, anim: {type: 'fade', dur: 0.5, delay: 0.76}}),
-      Tx('JL. SENOPATI NO. 18, JAKARTA SELATAN  |  OPERASIONAL: 08.00 - 22.00 WIB', m, locY + S * .014, tw, S * .022, '#C8BDB0', {align: 'center', spacing: 1, font: t.bf, anim: {type: 'fade', dur: 0.5, delay: 0.78}}),
-
-      // Call To Action (CTA) Button with bounce animation and glowing drop shadow
-      R(m, ctaY, tw, ctaH, p.primary, {radius: 4, shadow: {on: true, x: 0, y: 8, blur: 24, color: 'rgba(212,163,115,0.4)'}, anim: {type: 'bounce', dur: 0.7, delay: 0.85}}),
-      Tx(t.cta || 'KUNJUNGI KEDAI ATAU PESAN ONLINE SEKARANG', m, ctaY + ctaH * .28, tw, S * .03, '#120D0A', {bold: true, align: 'center', spacing: 2, font: t.bf, anim: {type: 'fade', dur: 0.5, delay: 0.9}}),
-
-      Tx('Diseduh dengan dedikasi dan presisi untuk setiap cangkir bernilai  ·  @artisancoffee.id', m, ctaY + ctaH + S * .016, tw, S * .02, '#8D7666', {align: 'center', font: t.bf, anim: {type: 'fade', dur: 0.5, delay: 0.95}})
-    ];
-
-    return [{bg: p.bg || '#120D0A', trans: 'fade', elements: els}];
-  },
   hero(W, H, t) { // photo on top, copy below
     const p = t.pal, S = Math.min(W, H), m = S * .07, wide = W / H > 1.3;
     if (wide) return LAYOUTS.split(W, H, t);
@@ -406,7 +347,6 @@ const LAYOUTS = {
 const tplTheme = (k, extra = {}) => ({...THEMES[k], key: k, ...extra});
 // [theme, size kind, layout, extra]
 const TEMPLATE_DEFS = [
-  ['kopi', 'instagram_post', 'showcase', {title: 'ARTISAN COFFEE MASTERPIECE', kicker: 'SPECIALTY ROASTERY & CAFE', sub: 'Racikan Biji Kopi Arabica Pilihan dengan Aroma Autentik & Tekstur Lembut', cta: 'PESAN SEKARANG / KUNJUNGI KEDAI'}],
   ['makanan', 'instagram_post', 'hero'], ['makanan', 'story', 'poster'], ['makanan', 'square', 'card'], ['makanan', 'youtube_thumbnail', 'split'], ['makanan', 'banner', 'split'],
   ['kopi', 'instagram_post', 'split'], ['kopi', 'story', 'hero', {mask: 'arch'}], ['kopi', 'square', 'poster'], ['kopi', 'a4', 'menu', {items: THEMES.kopi.items}], ['kopi', 'logo', 'logo', {brand: 'Kedai Kita', tagline: 'KOPI & ROTI', logoShape: 'blob'}],
   ['fashion', 'instagram_post', 'poster'], ['fashion', 'story', 'poster'], ['fashion', 'square', 'split'], ['fashion', 'banner', 'poster'], ['fashion', 'youtube_thumbnail', 'poster'],
@@ -424,26 +364,8 @@ const TEMPLATE_DEFS = [
 ];
 const TEMPLATES = TEMPLATE_DEFS.map(([th, kind, layout, extra], i) => { const t = tplTheme(th, extra);
   return {id: `t${i}`, theme: th, kind, layout, cat: t.cat, name: `${t.cat} · ${(SIZES[kind] || {}).label || kind}`, search: `${t.cat} ${t.tags} ${t.title} ${(SIZES[kind] || {}).label} ${layout}`.toLowerCase(), t}; });
-if (typeof window !== 'undefined') window.TEMPLATES = TEMPLATES;
-function buildTemplate(tp, W, H) { // returns pages with fresh ids, transitions, and staggered animations
-  return JSON.parse(JSON.stringify(LAYOUTS[tp.layout](W, H, tp.t))).map((pg, pi) => ({
-    id: uid(),
-    bg: pg.bg,
-    trans: pg.trans || (pi % 2 === 0 ? 'fade' : 'slide'),
-    title: pg.title,
-    elements: pg.elements.map((e, ei) => ({
-      ...e,
-      id: uid(),
-      anim: e.anim || (e.type === 'text' && (e.fontSize > 26 || e.bold) ? {type: 'fade', dur: 0.7, delay: 0.1} :
-                       e.type === 'image' ? {type: 'pop', dur: 0.8, delay: 0.25} :
-                       e.type === 'rect' && (e.radius > 0 || e.shadow?.on) ? {type: 'slide', dur: 0.6, delay: 0.35 + (ei % 4) * 0.08} :
-                       ei === pg.elements.length - 1 || ei === pg.elements.length - 2 ? {type: 'bounce', dur: 0.7, delay: 0.65} :
-                       {type: 'fade', dur: 0.5, delay: 0.15 + (ei % 6) * 0.08})
-    }))
-  }));
-}
-if (typeof window !== 'undefined') {
-  window.buildTemplate = buildTemplate;
+function buildTemplate(tp, W, H) { // returns pages with fresh ids
+  return JSON.parse(JSON.stringify(LAYOUTS[tp.layout](W, H, tp.t))).map(pg => ({id: uid(), bg: pg.bg, title: pg.title, elements: pg.elements.map(e => ({...e, id: uid()}))}));
 }
 
 // ---------- text presets (font + effect combinations) ----------

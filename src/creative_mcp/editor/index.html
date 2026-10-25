@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kanvara — HTML ke Canva</title>
-<meta name="description" content="Kanvara: server MCP yang mengubah desain HTML menjadi desain Canva native yang bisa diedit, lewat Chrome yang sudah login. Tanpa API key, tanpa PPTX.">
+<title>MCP Canva — HTML ke Canva</title>
+<meta name="description" content="MCP Canva: server MCP yang mengubah desain HTML menjadi desain Canva native yang bisa diedit, lewat Chrome yang sudah login. Tanpa API key, tanpa PPTX.">
 <script>
   // Old studio links carried their state in the hash (#bridge=…&token=… or #id=…): keep them working.
   if (/(^|[#&])(bridge|token|id|draft)=/.test(location.hash)) location.replace('studio.html' + location.hash);
@@ -132,12 +132,12 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;
 </head>
 <body>
 <nav><div class="wrap">
-  <a class="brand" href="#"><i>&lt;/&gt;</i>Kanvara</a>
+  <a class="brand" href="#"><i>&lt;/&gt;</i>MCP Canva</a>
   <div class="links">
     <a href="#cara-kerja">Cara kerja</a>
     <a href="#tools">Tools MCP</a>
     <a href="#pasang">Pasang</a>
-    <a href="https://github.com/bryankwandou/MCPCANVA">GitHub</a>
+    <a href="https://github.com/bryankwandou/mcpcapcutandcanva">GitHub</a>
     <a class="btn primary" href="studio.html">Buka Studio</a>
   </div>
 </div></nav>
@@ -145,7 +145,7 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;
 <header class="hero"><div class="wrap">
   <div>
     <h1>Tulis desain di HTML, buka di <em>Canva</em>, tetap bisa diedit.</h1>
-    <p class="lede">Kanvara merender halaman HTML Anda, lalu menyusunnya ulang di Canva sebagai elemen asli: tiap teks jadi kotak teks Canva dengan font, ukuran, dan warna yang sama, tiap gambar jadi elemen gambar. Satu panggilan tool, tanpa API key, tanpa PPTX.</p>
+    <p class="lede">MCP Canva merender halaman HTML Anda, lalu menyusunnya ulang di Canva sebagai elemen asli: tiap teks jadi kotak teks Canva dengan font, ukuran, dan warna yang sama, tiap gambar jadi elemen gambar. Satu panggilan tool, tanpa API key, tanpa PPTX.</p>
     <div class="cta">
       <a class="btn primary" href="#pasang">Pasang server MCP</a>
       <a class="btn ghost" href="studio.html">Coba editor web</a>
@@ -180,7 +180,7 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;
 <section id="cara-kerja"><div class="wrap">
   <div class="kicker">Cara kerja</div>
   <h2>Browser yang mengukur, Canva yang menyimpan.</h2>
-  <p class="intro">Canva Connect API tidak bisa menaruh teks atau gambar ke dalam desain. Kanvara memakai Chrome Anda sendiri yang sudah login Canva, dikendalikan lewat DevTools Protocol, jadi hasilnya tersimpan langsung di akun Anda.</p>
+  <p class="intro">Canva Connect API tidak bisa menaruh teks atau gambar ke dalam desain. MCP Canva memakai Chrome Anda sendiri yang sudah login Canva, dikendalikan lewat DevTools Protocol, jadi hasilnya tersimpan langsung di akun Anda.</p>
   <div class="steps">
     <div class="step"><h3>Render &amp; ukur</h3><p>HTML dibuka di Chrome headless pada ukuran desain. Setiap node teks dan <span class="mono">&lt;img&gt;</span> diukur: posisi, font, ukuran, tebal, warna.</p></div>
     <div class="step"><h3>Pisahkan latar</h3><p>Semua yang bukan teks atau gambar (bentuk, gradasi, SVG, grup bertanda <span class="mono">data-canva="raster"</span>) dirender sekali menjadi satu gambar latar beresolusi 2×.</p></div>
@@ -214,7 +214,7 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;
 <section id="pasang" style="padding-top:24px"><div class="wrap">
   <div class="kicker">Pasang</div>
   <h2>Tiga perintah, lalu minta agen Anda membuatnya.</h2>
-  <div class="term"><span class="p">$ </span>git clone https://github.com/bryankwandou/MCPCANVA &amp;&amp; cd MCPCANVA
+  <div class="term"><span class="p">$ </span>git clone https://github.com/bryankwandou/mcpcapcutandcanva &amp;&amp; cd MCPCANVA
 <span class="p">$ </span>pip install -e .
 <span class="p">$ </span>claude mcp add canva -s user -- mcp-canva
 
@@ -231,7 +231,7 @@ footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;
 </div></section>
 
 <footer><div class="wrap">
-  <span>Kanvara · open source di <a href="https://github.com/bryankwandou/MCPCANVA">GitHub</a></span>
+  <span>MCP Canva · open source di <a href="https://github.com/bryankwandou/mcpcapcutandcanva">GitHub</a></span>
   <span>Proyek independen, tidak berafiliasi dengan Canva. Canva adalah merek dagang pemiliknya.</span>
 </div></footer>
 </body>

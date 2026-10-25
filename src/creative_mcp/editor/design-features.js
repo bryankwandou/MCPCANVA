@@ -53,7 +53,7 @@ function applyTemplatePages(tp) {
 }
 async function templateAsNew(tp) {
   const z = SIZES[tp.kind], d = {id: uid(), title: tp.t.title.slice(0, 40), kind: tp.kind, palette: D.palette || 'kunyit', width: z.w, height: z.h, pages: buildTemplate(tp, z.w, z.h), fonts: [], updated: Date.now()};
-  try { await Studio.saveDesign(d); Studio.go('studio.html', {id: d.id}); } catch (err) { Studio.toast('Gagal membuat desain: ' + err.message, 5000); }
+  try { await Studio.saveDesign(d); Studio.go('index.html', {id: d.id}); } catch (err) { Studio.toast('Gagal membuat desain: ' + err.message, 5000); }
 }
 function useTemplate(tp) {
   const z = SIZES[tp.kind]; if (tp.kind === D.kind || (z.w === D.width && z.h === D.height)) return applyTemplatePages(tp);
@@ -225,7 +225,7 @@ const SCENES = [['Senja di bukit', 'senja', 720, 540], ['Pantai siang', 'laut', 
 function panelPhotos(B) {
   B.insertAdjacentHTML('beforeend', `<div class="label">${Studio.connected ? 'Foto di komputer' : 'Gambar contoh'}</div><div class="tiles masonry" id="pc" data-sec data-lim="${Studio.connected ? 6 : 10}"></div>`);
   if (!Studio.connected) {
-    B.insertAdjacentHTML('afterbegin', `<p class="note">Foto di komputer Anda muncul di sini setelah Studio terhubung (jalankan <span class="mono">mcp-canva studio</span>). Di bawah ini gambar contoh yang digambar oleh Rakit, bukan foto stok.</p>`);
+    B.insertAdjacentHTML('afterbegin', `<p class="note">Foto di komputer Anda muncul di sini setelah Studio terhubung (jalankan <span class="mono">creative-mcp studio</span>). Di bawah ini gambar contoh yang digambar oleh Rakit, bukan foto stok.</p>`);
     SCENES.forEach(([n, k, w, h], i) => { const src = sceneImage(k, w, h, i + 1), t = tile(`<img src="${src}" alt="${n}"><span class="cap">Contoh · ${n}</span>`, {src, ar: w / h}, () => placeImage(src, w / h), n);
       t.style.aspectRatio = `${w}/${h}`; B.querySelector('#pc').appendChild(named(t, `${n} ${k} foto contoh`)); });
   } else Studio.api('/api/library').then(lib => { lib.filter(i => i.type === 'photo').slice(0, 150).forEach(i => {
