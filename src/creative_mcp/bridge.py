@@ -264,8 +264,7 @@ def mcp_status() -> dict:
     return {
         "status": "connected",
         "token": token(),
-        "canva_desktop_installed": c_path is not None,
-        "canva_desktop_path": str(c_path) if c_path else None,
+        "canva_desktop_installed": c_path is not None,  # the path itself reveals the user's folders: not reported
         "tools": [
             "canva_list_designs",
             "canva_create_design",

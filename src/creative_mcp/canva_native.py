@@ -25,6 +25,24 @@ from pathlib import Path
 
 from .canva_browser import BASE, _Tab, ensure_chrome
 
+# Adaptive pace for the short UI waits: start at CANVA_SPEED (0.25 = 4x faster than the safe waits), double the
+# waits after a failure (busy PC or slow Canva), ease back toward full speed after each success.
+import os as _os
+SPEED = float(_os.getenv("CANVA_SPEED", "0.25"))
+_pace = [SPEED]
+
+
+def _nap(s):
+    time.sleep(s * _pace[0])
+
+
+def pace_ok():
+    _pace[0] = max(SPEED, _pace[0] * 0.85)
+
+
+def pace_fail():
+    _pace[0] = min(1.0, _pace[0] * 2)
+
 _FIELD = """(()=>{const i=[...document.querySelectorAll('input')].find(i=>{const l=i.closest('label')||i.parentElement?.parentElement;
   return (l?.innerText||'').trim().split(String.fromCharCode(10))[0]===%s});if(!i)return null;
   const r=i.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2,i.value]})()"""
@@ -84,6 +102,9 @@ def key_spec(k: str, shift: bool = False) -> dict:
 class Editor:
     def __init__(self, tab: _Tab):
         self.t = tab
+        # style -> text of a box on the current page that already has that style; cleared on page change
+        self.styled: dict[tuple, str] = {}
+        self.styled_page = None
 
     # -- low level -------------------------------------------------------------------------------------------
     def click(self, x, y, n=1, button="left"):
@@ -149,7 +170,7 @@ class Editor:
                 self.click(pos[0], pos[1])
                 return pos
             last = pos
-            time.sleep(0.7)
+            _nap(0.7)
         raise RuntimeError(f"tombol tidak ketemu/tidak stabil: {cond_js}")
 
     def type(self, text):
@@ -161,12 +182,12 @@ class Editor:
         `locate` (JS returning [x, y]) re-measures the input between attempts, e.g. while a panel slides in."""
         for attempt in range(3):
             if locate and attempt:
-                time.sleep(0.8)
+                _nap(0.8)
                 p = self.t.ev(locate)
                 if p:
                     x, y = p[0], p[1]
             self.click(x, y, clicks)
-            time.sleep(0.25)
+            _nap(0.25)
             if self.t.ev("""(()=>{const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA)$/.test(a.tagName))return false;
                 a.select();return true})()"""):
                 self.type(str(value))
@@ -174,7 +195,7 @@ class Editor:
                     self.key("Enter")
                 return
             if not locate:
-                time.sleep(0.6)
+                _nap(0.6)
         self.key("Escape")
         raise RuntimeError(f"kolom input tidak fokus di ({x:.0f},{y:.0f}); dibatalkan")
 
@@ -192,7 +213,7 @@ class Editor:
         if not pos:
             return False
         self.fill_input(pos[0], pos[1], value, clicks=3, locate=loc)  # panel may still be sliding in
-        time.sleep(0.5)
+        _nap(0.5)
         return True
 
     def position_panel(self):
@@ -236,10 +257,10 @@ class Editor:
         data = {"items": [], "files": [str(Path(path).resolve())], "dragOperationsMask": 1}
         for typ in ("dragEnter", "dragOver", "drop"):
             self.t.send("Input.dispatchDragEvent", {"type": typ, "x": cx, "y": cy, "data": data})
-            time.sleep(0.4)
+            _nap(0.4)
         end = time.time() + 120  # wait until the new image is inserted and selected
         while time.time() < end:
-            time.sleep(2)
+            _nap(2)
             try:
                 self.position_panel()
             except RuntimeError:
@@ -250,27 +271,66 @@ class Editor:
         self.place(x, y, w, h, keep_ratio=h is None)
 
     def add_text(self, text, font=None, size=None, color=None, x=0, y=0, w=None, bold=False, align="left"):
+        """Fast path: copy a box of the same style already on this page and only change words and place
+        (skips the font panel, size, colour, bold and align). Falls back to a fresh box on any problem."""
+        page = (self.page_counter() or [None])[0]
+        if page != self.styled_page:
+            self.styled, self.styled_page = {}, page
+        key = (font, size, (color or "").upper(), bool(bold), align)
+        src = self.styled.get(key)
+        if src and _os.getenv("CANVA_STYLE_REUSE", "1") != "0":
+            try:
+                self._add_text_copy(src, text, x, y, w)
+                self.styled[key] = text
+                return
+            except Exception:
+                self.styled.pop(key, None)
+                self.key("Escape"); self.key("Escape")
+        self._add_text_fresh(text, font, size, color, x, y, w, bold, align)
+        self.styled[key] = text
+
+    def _add_text_copy(self, src, text, x, y, w):
+        self.select_text(src)
+        before = self.t.ev("document.querySelectorAll('p').length")
+        self.copy(); _nap(0.4); self.paste()
+        if not self.t.wait("document.querySelectorAll('p').length>%d" % before, 5):
+            raise RuntimeError("salinan kotak teks tidak muncul")
+        _nap(0.6)
+        self.assert_single()
+        self.key("Enter")
+        if not self.t.wait("document.activeElement && document.activeElement.isContentEditable", 4):
+            self.key("Delete"); raise RuntimeError("salinan tidak bisa diedit; dihapus")
+        self.key("a", ctrl=True); self.type_lines(text); _nap(0.5)
+        typed = self.t.ev("document.activeElement && document.activeElement.isContentEditable ? document.activeElement.innerText : null")
+        self.key("Escape"); _nap(0.6)
+        if _flat(typed) != _flat(text):
+            self.assert_single(); self.key("Delete")
+            raise RuntimeError("teks salinan tidak cocok; salinan dihapus")
+        self.place(x, y, w, is_text=True)
+        self.key("Escape")
+
+    def _add_text_fresh(self, text, font=None, size=None, color=None, x=0, y=0, w=None, bold=False, align="left"):
         self.focus_workspace()
         self.key("t")
         if not self.t.wait("document.activeElement && document.activeElement.isContentEditable", 6):
             raise RuntimeError("kotak teks tidak terbuka")
         self.key("a", ctrl=True)  # inside the new box only: the default text
         self.type_lines(text)
-        time.sleep(0.5)
+        _nap(0.5)
         typed = self.t.ev("document.activeElement && document.activeElement.isContentEditable ? document.activeElement.innerText : null")
         if _flat(typed) != _flat(text):
             # the keystrokes did not land in a fresh text box: revert and stop before anything else is touched
             self.key("Escape"); self.key("z", ctrl=True); self.key("Escape")
             raise RuntimeError(f"teks tidak masuk ke kotak teks baru (terbaca: {typed!r}); dibatalkan")
         self.key("Escape")
-        time.sleep(0.8)
+        _nap(0.8)
         self.assert_single()
         if not self.text_on_page(text):
             # Canva sometimes drops the first keystrokes right after uploads: edit the box again
             self.key("Enter")
             if self.t.wait("document.activeElement && document.activeElement.isContentEditable", 4):
-                self.key("a", ctrl=True); self.type_lines(text); time.sleep(0.5)
-            self.key("Escape"); time.sleep(0.8)
+                self.key("a", ctrl=True); self.type_lines(text); _nap(0.5)
+            self.key("Escape"); _nap(0.8)
             self.assert_single()
             if not self.text_on_page(text):
                 self.key("Delete")  # the selection is our new box (checked single above)
@@ -299,20 +359,20 @@ class Editor:
             try:
                 if not self.t.ev(find):  # panel not open yet
                     self.button("t.startsWith('Toggle font selector')")
-                    time.sleep(1.0)  # the font panel slides in
+                    _nap(1.0)  # the font panel slides in
                 box = self.t.wait(find, 6)
                 if not box:
                     raise RuntimeError("kolom cari font tidak ketemu")
                 self.fill_input(box[0], box[1], font, enter=False, locate=find)
-                time.sleep(1.5)
+                _nap(1.5)
                 self.button(pick, wait=10)
-                time.sleep(1)
+                _nap(1)
                 return
             except RuntimeError as ex:
                 last = ex
                 self.assert_single()
                 self.button("t.startsWith('Toggle font selector')")  # closes the panel; next try reopens it
-                time.sleep(1.2)
+                _nap(1.2)
         raise RuntimeError(f"font {font!r}: {last}")
 
     def type_lines(self, text):
@@ -320,10 +380,10 @@ class Editor:
         and do not depend on Canva's wrapping."""
         for i, line in enumerate(text.split("\n")):
             if i:  # Canva's text editor handles the Enter keydown itself (a char event would add a second break)
-                time.sleep(0.25)
+                _nap(0.25)
                 self.t.send("Input.dispatchKeyEvent", {"type": "rawKeyDown", "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13})
                 self.t.send("Input.dispatchKeyEvent", {"type": "keyUp", "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13})
-                time.sleep(0.35)
+                _nap(0.35)
             if line:
                 self.type(line)
 
@@ -334,6 +394,60 @@ class Editor:
         return bool(self.t.ev("""(()=>{const want=%s;const norm=s=>(s||'').replace(/[\\ufeff\\u200b-\\u200d]/g,'').replace(/\\u00a0/g,' ').trim();
             const all=[...document.querySelectorAll('p,span,div')].filter(e=>e.children.length<3).map(e=>norm(e.innerText));
             return want.every(w=>all.includes(w))})()""" % json.dumps(lines)))
+
+    def select_text(self, text):
+        """Select the existing text box on the active page whose text is `text` (first line is enough) and
+        check that exactly that box is selected. Returns its on-screen centre."""
+        first = next(l.strip() for l in text.split("\n") if l.strip())
+        # Canva collapses runs of spaces; every text also has a hidden copy (inside a 1x1 clip), so only a
+        # match that is really under the mouse at its centre counts
+        first = " ".join(first.split())
+        find = """(()=>{const want=%s;const norm=s=>(s||'').replace(/[\\ufeff\\u200b-\\u200d]/g,'').replace(/\\u00a0/g,' ').split('\\n')[0].replace(/\\s+/g,' ').trim();
+            for(const e of document.querySelectorAll('p,span,div')){if(e.children.length>=3||norm(e.innerText)!==want)continue;
+              const r=e.getBoundingClientRect();if(r.width<4||r.y<60||r.bottom>innerHeight-60)continue;
+              const x=r.x+r.width/2,y=r.y+r.height/2,h=document.elementFromPoint(x,y);
+              if(h&&(e.contains(h)||h.contains(e)))return [x,y]}
+            return null})()""" % json.dumps(first)
+        self.focus_workspace()
+        p = self.t.ev(find)
+        if not p:  # maybe scrolled off: bring the active page fully into view and look again
+            self.go_to_page((self.page_counter() or [None])[0]); _nap(1)
+            p = self.t.ev(find)
+        if not p:
+            raise RuntimeError(f"teks {first!r} tidak terlihat di halaman ini")
+        self.click(p[0], p[1]); _nap(0.6)
+        if self.t.ev("document.activeElement && document.activeElement.isContentEditable"):
+            self.key("Escape"); _nap(0.4)
+        self.assert_single()
+        if not self.t.ev("!!document.querySelector('input[aria-label=\"Font size\"]')"):
+            self.key("Escape")
+            raise RuntimeError(f"yang terpilih bukan kotak teks {first!r}; tidak diubah")
+        return p
+
+    def edit_text(self, old, new):
+        """Replace the words of an existing text box; its font, size, colour and place stay as they are."""
+        self.select_text(old)
+        self.key("Enter")  # into text editing of the selected box
+        if not self.t.wait("document.activeElement && document.activeElement.isContentEditable", 4):
+            raise RuntimeError("kotak teks tidak bisa diedit")
+        self.key("a", ctrl=True); self.type_lines(new); _nap(0.5)
+        typed = self.t.ev("document.activeElement && document.activeElement.isContentEditable ? document.activeElement.innerText : null")
+        self.key("Escape"); _nap(0.6)
+        if _flat(typed) != _flat(new):
+            self.key("z", ctrl=True); self.key("Escape")
+            raise RuntimeError(f"teks baru tidak masuk (terbaca: {typed!r}); dibatalkan")
+        self.key("Escape")
+
+    def delete_text(self, text):
+        """Delete one existing text box (only that box: a multi-selection or a non-text element is refused)."""
+        self.select_text(text)
+        self.key("Delete"); _nap(0.8)
+
+    def move_text(self, text, x, y, w=None):
+        """Move (and optionally widen) an existing text box to page coordinates."""
+        self.select_text(text)
+        self.place(x, y, w, is_text=True)
+        self.key("Escape")
 
     DEFAULT_TEXTS = ("Your paragraph text", "Add a heading", "Add a subheading", "Add a little bit of body text")
 
@@ -348,16 +462,16 @@ class Editor:
             p = self.t.ev(find)
             if not p:
                 break
-            self.click(p[0], p[1]); time.sleep(0.6)
+            self.click(p[0], p[1]); _nap(0.6)
             if self.t.ev("document.activeElement && document.activeElement.isContentEditable"):
-                self.key("Escape"); time.sleep(0.4)  # leave text editing, keep the box selected
+                self.key("Escape"); _nap(0.4)  # leave text editing, keep the box selected
             self.assert_single()
             # only delete when the selection is really a text box (text toolbar shows the font size field);
             # clicking may hit the background image under the placeholder, which must never be deleted
             if not self.t.ev("!!document.querySelector('input[aria-label=\"Font size\"]')"):
                 self.key("Escape")
                 raise RuntimeError("teks bawaan tidak bisa dipilih tanpa memilih elemen lain; tidak dihapus")
-            self.key("Delete"); time.sleep(0.8)
+            self.key("Delete"); _nap(0.8)
             removed += 1
         if self.t.ev(find):
             raise RuntimeError("teks bawaan Canva masih tersisa di desain")
@@ -370,7 +484,7 @@ class Editor:
         p = self.t.ev("""(()=>{const b=[...document.querySelectorAll('button')].find(b=>/Add page/.test(b.innerText||''));
             if(!b)return null;const r=b.getBoundingClientRect();return [r.x+r.width/2,r.y-10]})()""")
         if p:
-            self.click(p[0], p[1]); time.sleep(0.4)
+            self.click(p[0], p[1]); _nap(0.4)
         self.key("Escape")
 
     def assert_single(self):
@@ -394,7 +508,7 @@ class Editor:
             except ValueError:
                 pass
             self.fill_input(p[0], p[1], ("%g" % want), clicks=3, locate=find)
-            time.sleep(0.9)
+            _nap(0.9)
             self.assert_single()
         p = self.t.ev(find)
         raise RuntimeError(f"ukuran font tidak berubah ke {size} (terbaca {p and p[2]})")
@@ -402,7 +516,7 @@ class Editor:
     def set_bold(self, on=True):
         st = self.t.ev(_BTN % "t==='Bold'")
         if st and (st[2] == "true") != on:
-            self.click(st[0], st[1]); time.sleep(0.5)
+            self.click(st[0], st[1]); _nap(0.5)
 
     def set_align(self, target="left"):
         """The toolbar button cycles left > center > right > justify; its label names the current one."""
@@ -412,11 +526,11 @@ class Editor:
                 return b?b.getAttribute('aria-label'):null})()""")
             if not lab or lab.lower().endswith(target):
                 return
-            self.button(q); time.sleep(0.5)
+            self.button(q); _nap(0.5)
 
     def set_text_color(self, hex_color):
         self.button("t.startsWith('Current text color')||t==='Text color'")
-        time.sleep(1.2)
+        _nap(1.2)
         # "+" / "Add a new color" opens the picker with a hex input
         self.button("/new colou?r|add a new colou?r/i.test(t)", wait=6)
         inp = self.t.wait("""(()=>{const i=[...document.querySelectorAll('input')].find(i=>/^#?[0-9a-f]{6}$/i.test(i.value||'')||/hex/i.test(i.getAttribute('aria-label')||''));
@@ -424,7 +538,7 @@ class Editor:
         if not inp:
             raise RuntimeError("input hex warna tidak ketemu")
         self.fill_input(inp[0], inp[1], hex_color.lstrip("#"), clicks=3)
-        time.sleep(0.8)
+        _nap(0.8)
         self.key("Escape")
 
     # only the editor footer: a slide can itself contain text like "1 / 11"
@@ -441,6 +555,8 @@ class Editor:
         """Append an empty page with the "+ Add page" bar under the last page; the new page becomes active."""
         self.key("Escape"); self.key("Escape")
         before = self.page_counter() or [0, 0]
+        if before[0] != before[1]:  # Canva inserts after the active page: start from the last one
+            self.go_to_page(before[1]); before = self.page_counter() or before
         # the active page's header icon (aria-label "Add page") is on screen; the bar under the last page
         # may be scrolled out of view
         self.button("b.getAttribute('aria-label')==='Add page'&&!(b.innerText||'').trim()"
@@ -448,8 +564,13 @@ class Editor:
         # Canva inserts the page after the active one and makes it active
         if not self.t.wait("(()=>{const c=%s;return c&&c[1]===%d})()" % (self.PAGE_COUNTER.strip(), before[1] + 1), 15):
             raise RuntimeError(f"halaman baru tidak muncul (sebelumnya {before}, sekarang {self.page_counter()})")
-        time.sleep(1.5)
-        return (self.page_counter() or [None])[0]
+        _nap(1.5)
+        # the counter can lag behind the new page for a moment: wait for it rather than a fixed pause
+        self.t.wait("(()=>{const c=%s;return c&&c[0]===c[1]})()" % self.PAGE_COUNTER.strip(), 8)
+        now = self.page_counter() or [None, None]
+        if now[0] != now[1]:
+            raise RuntimeError(f"halaman baru bukan halaman terakhir ({now})")
+        return now[0]
 
     def go_to_page(self, n=None):
         """Make page n (default: the last page) the active page: scroll the page list and click its "Page n" header."""
@@ -459,7 +580,7 @@ class Editor:
         if n == total:  # last page: jump straight to the bottom of the page list
             self.t.ev("""(()=>{const s=[...document.querySelectorAll('div')].find(d=>d.scrollHeight>d.clientHeight+200&&/auto|scroll/.test(getComputedStyle(d).overflowY)&&d.clientWidth>600);
                 if(s)s.scrollTop=s.scrollHeight})()""")
-            time.sleep(1.5)
+            _nap(1.5)
         for _ in range(30):
             if (self.page_counter() or [None])[0] == n:
                 return n
@@ -473,7 +594,7 @@ class Editor:
               return null})()""" % (n, n))
             if p:
                 self.click(p[0], p[1])
-            time.sleep(1.2)
+            _nap(1.2)
         if (self.page_counter() or [None])[0] != n:
             raise RuntimeError(f"tidak bisa pindah ke halaman {n} (sekarang {self.page_counter()})")
         return n
@@ -518,13 +639,13 @@ def create_design(width: int, height: int) -> str:
                     pos = p
                     break
                 last = p
-                time.sleep(0.8)
+                _nap(0.8)
             if pos:
                 ed.click(pos[0], pos[1])
             boxes = home.wait(boxes_js, 8)
             if not boxes and pos is None:
                 ed.stable_button("t==='Create a design'", wait=20)  # older layout: open the dialog first
-                time.sleep(2)
+                _nap(2)
                 continue
             if boxes:
                 break
@@ -536,7 +657,7 @@ def create_design(width: int, height: int) -> str:
             raise RuntimeError("dialog Custom size tidak muncul")
         for (bx, by), v in zip(boxes, (width, height)):
             ed.fill_input(bx, by, v, clicks=3, enter=False)
-        time.sleep(1)
+        _nap(1)
         before = {t["id"] for t in json.load(urllib.request.urlopen(BASE + "/json", timeout=5))}
         # the button stays disabled until Canva has taken both numbers; clicking earlier does nothing
         home.wait("(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.innerText||'').trim()==='Create new design');"
@@ -544,7 +665,7 @@ def create_design(width: int, height: int) -> str:
         ed.button("t==='Create new design'")
         end = time.time() + 90
         while time.time() < end:
-            time.sleep(2)
+            _nap(2)
             # wait for the real id: the first URL is a transient ".../design/editor/shell?create..." one
             t = _find_tab(lambda t: t["id"] not in before and re.search(r"/design/D[\w-]+/", t.get("url", "")))
             if t:
@@ -590,7 +711,7 @@ def shortcut_selftest(design_url: str | None = None) -> dict:
     steps = []
 
     def n():
-        time.sleep(1.5)
+        _nap(1.5)
         return tab.ev(count_js)
 
     def check(name, combo, expect, got, extra=None):
@@ -608,19 +729,19 @@ def shortcut_selftest(design_url: str | None = None) -> dict:
         check("redo", "ctrl+y", 2, n())
         ed.undo(); n(); ed.hotkey("ctrl+shift+z")
         check("redo (alternatif)", "ctrl+shift+z", 2, n())
-        ed.focus_workspace(); ed.select_all(); time.sleep(1)
+        ed.focus_workspace(); ed.select_all(); _nap(1)
         check("pilih semua", "ctrl+a", True, bool(tab.ev(multi_js)))
         ed.cut()
         check("potong", "ctrl+x", 0, n())
         ed.paste()
         check("tempel hasil potong", "ctrl+v", 2, n())
-        ed.focus_workspace(); ed.select_all(); time.sleep(0.8)
+        ed.focus_workspace(); ed.select_all(); _nap(0.8)
         ed.hotkey("shift+ctrl+x")  # Canva has no cut on Shift+Ctrl+X: the elements must stay
         check("shift+ctrl+x (Canva tidak memotong, elemen tetap)", "shift+ctrl+x", 2, n())
-        ed.focus_workspace(); ed.select_all(); time.sleep(0.8)
+        ed.focus_workspace(); ed.select_all(); _nap(0.8)
         ed.duplicate()
         check("duplikat", "ctrl+d", 4, n())
-        ed.focus_workspace(); ed.select_all(); time.sleep(0.8)
+        ed.focus_workspace(); ed.select_all(); _nap(0.8)
         ed.hotkey("Delete")
         check("hapus", "Delete", 0, n())
         ed.undo()
@@ -645,6 +766,48 @@ def shortcut_selftest(design_url: str | None = None) -> dict:
             check(f"keydown {c}", c, True, bool(got) and got[2:5] == want, {"event": got})
         shot =tab.screenshot(Path.home() / ".creative-mcp" / "canva_shortcut_selftest.png")
         return {"ok": all(s["ok"] for s in steps), "design_url": tab.ev("location.href"), "steps": steps, "screenshot": shot}
+    finally:
+        tab.ws.close()
+
+
+def edit(design_url: str, ops: list[dict]) -> dict:
+    """Change an existing design in place, without rebuilding pages. Each op:
+    {"page": n, "action": "replace", "text": old, "new": new} | {"page": n, "action": "delete", "text": t}
+    | {"page": n, "action": "move", "text": t, "x": .., "y": .., "w": ..} | {"page": n, "action": "add", ...text element}.
+    Text is found by its first line on that page; anything ambiguous is refused, never guessed."""
+    st = ensure_chrome()
+    if not st.get("running"):
+        return {"ok": False, **st}
+    existing = _find_tab(lambda t: t.get("url", "").split("?")[0] == design_url.split("?")[0])
+    if existing:
+        urllib.request.urlopen(f"{BASE}/json/close/{existing['id']}", timeout=5)
+    tab = _open_editor(design_url)
+    ed = Editor(tab)
+    done, errors = [], []
+    try:
+        for i, op in enumerate(ops):
+            try:
+                ed.go_to_page(int(op["page"])); _nap(1)
+                a = op.get("action", "replace")
+                if a == "replace":
+                    ed.edit_text(op["text"], op["new"])
+                    if not ed.text_on_page(op["new"]):
+                        raise RuntimeError("teks baru tidak terbaca di halaman")
+                elif a == "delete":
+                    ed.delete_text(op["text"])
+                elif a == "move":
+                    ed.move_text(op["text"], op["x"], op["y"], op.get("w"))
+                elif a == "add":
+                    ed.add_text(op["text"], op.get("font"), op.get("size"), op.get("color"), op.get("x", 0), op.get("y", 0),
+                                op.get("w"), op.get("bold", False), op.get("align", "left"))
+                else:
+                    raise ValueError(f"aksi tidak dikenal: {a}")
+                done.append(i)
+            except Exception as ex:  # one bad op must not touch or stop the others
+                errors.append({"op": i, "error": str(ex)})
+                ed.key("Escape"); ed.key("Escape")
+        shot = tab.screenshot(Path.home() / ".creative-mcp" / "canva_edit_last.png")
+        return {"ok": not errors, "design_url": design_url, "done": done, "errors": errors, "screenshot": shot}
     finally:
         tab.ws.close()
 
@@ -683,7 +846,7 @@ def build(spec: dict) -> dict:
             # the editor opens on whatever page was viewed last; resume work always happens at the end
             ed.go_to_page()
         if fill_first and spec.get("clear_current_page"):
-            ed.focus_workspace(); ed.select_all(); time.sleep(1); ed.hotkey("Delete"); time.sleep(1.5)
+            ed.focus_workspace(); ed.select_all(); _nap(1); ed.hotkey("Delete"); _nap(1.5)
         reopen_every = int(spec.get("reopen_every", 4))
         for pi, page in enumerate(pages):
             if pi and reopen_every and pi % reopen_every == 0:
@@ -700,16 +863,20 @@ def build(spec: dict) -> dict:
             for i, e in enumerate(els):
                 for attempt in range(2):
                     try:
+                        # never put an element on another page (a reconnect or scroll can move the active page)
+                        cur = ed.page_counter()
+                        if page_numbers[-1] and cur and cur[0] != page_numbers[-1]:
+                            ed.go_to_page(page_numbers[-1])
                         if e["type"] == "image":
                             ed.add_image(e["path"], e.get("x", 0), e.get("y", 0), e.get("w"), e.get("h"))
                         elif e["type"] == "text":
                             ed.add_text(e["text"], e.get("font"), e.get("size"), e.get("color"), e.get("x", 0), e.get("y", 0), e.get("w"), e.get("bold", False), e.get("align", "left"))
-                        ok_here.append(i)
-                        note(page=pi, element=i, ok=True)
+                        ok_here.append(i); pace_ok()
+                        note(page=pi, element=i, ok=True, pace=round(_pace[0], 2))
                         break
                     except (websocket.WebSocketTimeoutException, TimeoutError, ConnectionError) as ex:
                         # the tab froze (e.g. another tab came to the front): reconnect, wake it, retry once
-                        note(page=pi, element=i, ok=False, error=f"tab beku, sambung ulang: {ex}")
+                        pace_fail(); note(page=pi, element=i, ok=False, error=f"tab beku, sambung ulang: {ex}")
                         try:
                             tab.reconnect(); time.sleep(3)
                         except Exception:  # dead for good: reopen the editor on the page being built (the last one)
@@ -718,7 +885,7 @@ def build(spec: dict) -> dict:
                         if attempt:
                             errors.append({"page": pi, "element": i, "error": str(ex)})
                     except Exception as ex:  # keep going: one failed element should not lose the rest
-                        errors.append({"page": pi, "element": i, "error": str(ex)})
+                        pace_fail(); errors.append({"page": pi, "element": i, "error": str(ex)})
                         note(page=pi, element=i, ok=False, error=str(ex))
                         break
             ed.key("Escape"); ed.key("Escape")
